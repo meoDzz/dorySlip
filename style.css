@@ -1,0 +1,105 @@
+:root{
+  --bg:#f6f7fb; --card:#fff; --text:#111827; --muted:#6b7280;
+  --line:#e5e7eb; --pri:#2563eb; --danger:#dc2626;
+}
+*{ box-sizing:border-box; }
+body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:var(--text); background:var(--bg); }
+.topbar{ display:flex; gap:12px; align-items:center; padding:10px 12px; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:10; }
+.brand{ font-weight:700; white-space:nowrap; }
+.topnav{ display:flex; gap:6px; }
+.spacer{ flex:1; }
+.userbox{ color:var(--muted); }
+main{ padding:16px; }
+.view{ display:none; }
+.view.active{ display:block; }
+
+.toolbar{ display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.tab{ border:1px solid var(--line); background:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; }
+.tab.small{ padding:6px 10px; font-size:13px; }
+.tab.active{ border-color:var(--pri); color:var(--pri); }
+
+.grid.cards{ display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; }
+.card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:12px; }
+.card.soft{ background:#fbfbfd; }
+.card.narrow{ max-width:420px; margin-inline:auto; }
+.row{ display:flex; gap:8px; align-items:center; margin:6px 0; }
+.row.wrap{ flex-wrap:wrap; }
+.row > label{ min-width:140px; color:var(--muted); }
+.row > input, .row > select{ flex:1; padding:8px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+.stat-title{ color:var(--muted); }
+.stat-value{ font-size:36px; font-weight:700; }
+
+.table{ width:100%; border-collapse: collapse; }
+.table th, .table td{ border-top:1px solid var(--line); padding:8px; text-align:left; }
+.table thead th{ background:#f9fafb; border-top:none; }
+.table tfoot th{ background:#f9fafb; }
+.table tr:hover td{ background:#fafafa; }
+.table-scroll{ overflow:auto; border:1px solid var(--line); border-radius:8px; }
+
+.btn{ border:1px solid var(--line); background:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; }
+.btn.primary{ background:var(--pri); color:#fff; border-color:var(--pri); }
+.btn.danger{ background:var(--danger); color:#fff; border-color:var(--danger); }
+.btn.linklike{ background:transparent; border:none; color:var(--pri); cursor:pointer; padding:6px 8px; }
+
+.filebtn{ position:relative; display:inline-flex; align-items:center; gap:8px; }
+
+.muted{ color:var(--muted); }
+.small{ font-size:12px; }
+
+/* slip */
+dialog{ border:none; padding:0; width:min(920px, 96vw); border-radius:12px; }
+dialog::backdrop{ background: rgba(0,0,0,0.3); }
+dialog .slip{ background:#fff; border-radius:12px; padding:0; }
+dialog .slip header, dialog .slip footer{ padding:12px 16px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
+dialog .slip footer{ border-top:1px solid var(--line); border-bottom:none; }
+#slip-content{ padding:16px; }
+#btn-slip-close{ border:none; background:transparent; font-size:20px; cursor:pointer; }
+.slip-body{ display:grid; grid-template-columns:1fr 1fr; gap:12px 24px; }
+.kv label{ display:block; color:var(--muted); font-size:12px; }
+.kv div{ margin-top:2px; }
+.slip-table{ width:100%; border-collapse: collapse; margin-top:12px; }
+.slip-table th, .slip-table td{ border:1px solid var(--line); padding:10px; }
+.slip-table thead th{ background:#f9fafb; }
+
+/** Phieu Chi CSS **/
+.voucher-container {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 14px;
+    line-height: 1.6;
+    background-color: #fff;
+    color: #000;
+    padding: 40px;
+}
+.voucher-container .header { text-align: center; margin-bottom: 20px; }
+.voucher-container .header h1 { font-size: 24px; font-weight: bold; margin: 0; color: #d32f2f; }
+.voucher-container .header h2 { font-size: 20px; font-weight: bold; margin: 5px 0; }
+.voucher-container .header p { margin: 0; font-style: italic; }
+.voucher-container .info-section { display: flex; justify-content: space-between; margin-bottom: 20px; }
+.voucher-container .info-left { width: 70%; }
+.voucher-container .info-right { text-align: right; width: 30%; }
+.voucher-container .info-row { display: flex; margin-bottom: 5px; align-items: flex-end; }
+.voucher-container .info-row label { font-weight: bold; min-width: 180px; flex-shrink: 0; }
+.voucher-container .info-row span { border-bottom: 1px dotted #000; flex-grow: 1; padding: 0 4px; }
+.voucher-container .payment-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+.voucher-container .payment-table th, .voucher-container .payment-table td { border: 1px solid #000; padding: 8px; text-align: left; }
+.voucher-container .payment-table th { background-color: #f2f2f2; text-align: center; font-weight: bold; }
+.voucher-container .payment-table .amount-col { text-align: right; }
+.voucher-container .payment-table .total-row td { font-weight: bold; }
+.voucher-container .summary-section { margin-bottom: 30px; }
+.voucher-container .summary-section p { margin: 5px 0; }
+.voucher-container .summary-section span { font-style: italic; padding: 0 4px; border-bottom: 1px dotted #000; }
+.voucher-container .signature-section { display: flex; justify-content: space-around; text-align: center; margin-top: 40px; }
+.voucher-container .signature-box { width: 18%; }
+.voucher-container .signature-box p { margin: 0; font-weight: bold; }
+.voucher-container .signature-box .note { font-style: italic; font-weight: normal; font-size: 12px; }
+#phieu-chi-controls { padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); }
+
+@media print {
+  body { background:#fff; }
+  nav, .toolbar, .btn, .filebtn, .card, #dlg-slip, #dlg-phieu-chi > article > div:last-child { display:none !important; }
+  main { padding: 0; }
+  dialog { position:static; width:auto; border:none; padding: 0; display: block !important; }
+  dialog::backdrop { display: none; }
+  .voucher-container{ box-shadow: none; border:none; }
+  #phieu-chi-print-area { display: block; }
+}

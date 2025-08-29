@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chấm công & Lương (HTML/CSS/JSON)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+
+<body>
+  <nav class="topbar">
+    <div class="brand">Hệ thống chấm công & lương</div>
+    <div class="topnav">
+      <button class="tab small active" data-target="#view-dashboard">Tổng quan</button>
+      <button class="tab small role-nhap_lieu" data-target="#view-entry">Nhập liệu</button>
+      <button class="tab small role-ke_toan" data-target="#view-payroll">Kế toán</button>
+      <button class="tab small role-admin" data-target="#view-admin">Admin</button>
+    </div>
+    <div class="spacer"></div>
+    <div id="userBox" class="userbox"></div>
+    <button id="btn-logout" class="btn linklike" style="display:none">Đăng xuất</button>
+  </nav>
+
+  <main id="app">
+    <section id="view-login" class="view active">
+      <div class="card narrow">
+        <h2>Đăng nhập</h2>
+        <div class="row">
+          <label>Tài khoản</label>
+          <input id="login-username" placeholder="nhaplieu / ketoan / admin">
+        </div>
+        <div class="row">
+          <label>Mật khẩu</label>
+          <input id="login-password" type="password" placeholder="123456">
+        </div>
+        <button id="btn-login" class="btn primary">Đăng nhập</button>
+      </div>
+      <div class="card narrow soft">
+        <h3>Tài khoản mẫu</h3>
+        <ul>
+          <li><b>nhaplieu</b> / 123456 (Nhập liệu)</li>
+          <li><b>ketoan</b> / 123456 (Kế toán)</li>
+          <li><b>admin</b> / 123456 (Admin)</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="view-dashboard" class="view">
+      <div class="toolbar">
+        <button data-target="#view-dashboard" class="tab active">Tổng quan</button>
+        <button data-target="#view-entry" class="tab role-nhap_lieu">Nhập liệu (bảng tháng)</button>
+        <button data-target="#view-payroll" class="tab role-ke_toan">Kế toán</button>
+        <button data-target="#view-admin" class="tab role-admin">Admin</button>
+      </div>
+
+      <div class="grid cards">
+        <div class="card">
+          <div class="stat-title">Nhân sự</div>
+          <div id="stat-emps" class="stat-value">0</div>
+        </div>
+        <div class="card">
+          <div class="stat-title">Dòng nhập liệu tháng</div>
+          <div id="stat-rows" class="stat-value">0</div>
+        </div>
+      </div>
+      <div class="card soft">
+        <h3>Xuất / Nhập JSON</h3>
+        <div class="row wrap">
+          <button id="btn-export" class="btn">Xuất JSON</button>
+          <label class="filebtn btn">
+            Nhập JSON
+            <input id="import-file" type="file" accept=".json" hidden>
+          </label>
+          <button id="btn-reset" class="btn danger">Xóa dữ liệu (reset)</button>
+        </div>
+        <p class="muted small">Dữ liệu gồm users, employees, entryMonthly (bảng nhập tháng), payrolls.</p>
+      </div>
+    </section>
+
+    <section id="view-entry" class="view">
+      <div class="card">
+        <h3>Nhập liệu theo tháng</h3>
+        <div class="row wrap">
+          <label>Tháng</label>
+          <input id="en-month" type="month">
+          <button id="btn-en-newrow" class="btn">Thêm dòng</button>
+          <button id="btn-en-copy" class="btn">Sao chép tháng trước</button>
+          <button id="btn-en-save" class="btn primary">Lưu tháng</button>
+        </div>
+
+        <div class="table-scroll">
+          <table class="table" id="tbl-entry">
+            <thead>
+              <tr>
+                <th>TÊN TIẾNG VIỆT</th>
+                <th>TÊN TIẾNG ANH</th>
+                <th>MÃ SỐ NHÂN VIÊN</th>
+                <th>SỐ TÀI KHOẢN</th>
+                <th>NGÂN HÀNG</th>
+                <th>LỚP</th>
+                <th>TỔNG SỐ BUỔI DẠY</th>
+                <th>TỔNG SỐ GIỜ DẠY</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <p class="muted small">
+          * Chọn tháng → nhập các cột như mẫu. Lưu ý số buổi/giờ là số (có thể dùng 0.5, 1.25…).<br>
+          * Nút <b>Sao chép tháng trước</b>: tạo danh sách nhân sự cho tháng hiện tại dựa trên tháng liền kề trước (không sao chép số liệu).<br>
+          * Khi lưu: hệ thống sẽ cập nhật/ tạo nhân sự và tạo dữ liệu tổng hợp tháng cho Kế toán.
+        </p>
+      </div>
+    </section>
+
+    <section id="view-payroll" class="view">
+      <div class="card">
+        <h3>Kế toán</h3>
+        <div class="row wrap">
+          <label>Tháng</label>
+          <input id="pr-month" type="month">
+          <button id="btn-pr-build" class="btn primary">Tổng hợp tháng</button>
+          <button id="btn-pr-lock" class="btn">Khóa tháng</button>
+          <button id="btn-pr-export" class="btn">Xuất CSV</button>
+        </div>
+        <table class="table" id="tbl-pr">
+          <thead>
+            <tr>
+              <th>Nhân sự</th><th>Giờ</th><th>Rate</th><th>Gross</th>
+              <th>BHXH</th><th>Net</th><th>Ứng</th><th>Còn lại</th><th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="muted small">Có thể chỉnh <b>Rate</b>, <b>BHXH</b>, <b>Ứng</b> trực tiếp trong bảng (khi chưa khóa). Rate thay đổi sẽ được lưu về hồ sơ nhân sự.</p>
+      </div>
+    </section>
+
+    <section id="view-admin" class="view">
+      <div class="card">
+        <h3>Admin - Thống kê</h3>
+        <div class="row wrap">
+          <label>Tháng</label>
+          <input id="ad-month" type="month">
+          <button id="btn-ad-refresh" class="btn">Xem</button>
+        </div>
+        <table class="table" id="tbl-ad">
+          <thead><tr><th>Nhân sự</th><th>Giờ</th><th>Gross</th><th>BHXH</th><th>Net</th><th>Ứng</th><th>Còn lại</th></tr></thead>
+          <tbody></tbody>
+          <tfoot><tr><th colspan="4"></th><th>Tổng Net</th><th id="ad-total-net" colspan="2">0</th></tr></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <dialog id="dlg-slip">
+      <article class="slip">
+        <header>
+          <h3>PAYMENT SLIP / Phiếu lương</h3>
+          <button id="btn-slip-close" aria-label="Đóng">×</button>
+        </header>
+        <div id="slip-content"></div>
+        <footer>
+          <button id="btn-slip-print" class="btn primary">In / Lưu PDF</button>
+        </footer>
+      </article>
+    </dialog>
+    
+    <dialog id="dlg-phieu-chi">
+        <article id="phieu-chi-content" class="voucher-container"></article>
+    </dialog>
+  </main>
+
+    <script defer src="script.js"></script>
+</body>
+</html>
