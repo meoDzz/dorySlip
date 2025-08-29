@@ -6,6 +6,11 @@
   <title>Chấm công & Lương (HTML/CSS/JSON)</title>
   <link rel="stylesheet" href="style.css">
 </head>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+<script defer src="script.js"></script>
 
 
 <body>
@@ -64,18 +69,6 @@
           <div id="stat-rows" class="stat-value">0</div>
         </div>
       </div>
-      <div class="card soft">
-        <h3>Xuất / Nhập JSON</h3>
-        <div class="row wrap">
-          <button id="btn-export" class="btn">Xuất JSON</button>
-          <label class="filebtn btn">
-            Nhập JSON
-            <input id="import-file" type="file" accept=".json" hidden>
-          </label>
-          <button id="btn-reset" class="btn danger">Xóa dữ liệu (reset)</button>
-        </div>
-        <p class="muted small">Dữ liệu gồm users, employees, entryMonthly (bảng nhập tháng), payrolls.</p>
-      </div>
     </section>
 
     <section id="view-entry" class="view">
@@ -109,9 +102,9 @@
         </div>
 
         <p class="muted small">
-          * Chọn tháng → nhập các cột như mẫu. Lưu ý số buổi/giờ là số (có thể dùng 0.5, 1.25…).<br>
-          * Nút <b>Sao chép tháng trước</b>: tạo danh sách nhân sự cho tháng hiện tại dựa trên tháng liền kề trước (không sao chép số liệu).<br>
-          * Khi lưu: hệ thống sẽ cập nhật/ tạo nhân sự và tạo dữ liệu tổng hợp tháng cho Kế toán.
+          * Nhấn <b>Thêm dòng</b> để tạo mục nhập liệu mới.<br>
+          * Nút <b>Sao chép tháng trước</b>: (chưa có chức năng) tạo danh sách nhân sự cho tháng hiện tại dựa trên tháng liền kề trước.<br>
+          * Khi lưu: hệ thống sẽ cập nhật/ tạo nhân sự và tạo dữ liệu tổng hợp tháng cho Kế toán trên Firebase.
         </p>
       </div>
     </section>
@@ -173,6 +166,6 @@
     </dialog>
   </main>
 
-    <script defer src="script.js"></script>
+
 </body>
 </html>

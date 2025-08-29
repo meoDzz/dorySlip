@@ -1,625 +1,342 @@
 /** ================== CONFIGURATION ================== **/
-// Điền thông tin của bạn vào đây
-const GITHUB_CONFIG = {
-  owner: 'TEN_TAI_KHOAN_GITHUB_CUA_BAN', // Thay bằng username GitHub của bạn
-  repo: 'TEN_REPOSITORY_CUA_BAN',       // Thay bằng tên repository bạn vừa tạo
-  path: 'data.json',                    // Tên file dữ liệu
-  token: 'GITHUB_PERSONAL_ACCESS_TOKEN_CUA_BAN' // Dán Personal Access Token bạn vừa tạo vào đây
+const firebaseConfig = {
+  apiKey: "AIzaSyD6P3DDBDtdJYGo9GADi3-hP6Ex2Ijkr8M",
+  authDomain: "dorydata-d9957.firebaseapp.com",
+  projectId: "dorydata-d9957",
+  storageBucket: "dorydata-d9957.appspot.com",
+  messagingSenderId: "60750852171",
+  appId: "1:60750852171:web:4d05a104fa96b2d6bc1dce",
+  measurementId: "G-V9SX4C86HC"
 };
+
+// Khởi tạo Firebase (compat)
+firebase.initializeApp(firebaseConfig);
+const dbFs = firebase.firestore(); // Firestore sẽ là CSDL chính của chúng ta
+
 /** =================================================== **/
+/** Utility DOM helpers **/
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+function show(sel) {
+  $$(".view").forEach(v => v.style.display = "none");
+  $(sel).style.display = "block";
+}
+function activateTabs(scopeSel) {
+  const scope = $(scopeSel);
+  if (!scope) return;
+  $$(".tab", scope).forEach(tab => {
+    tab.addEventListener("click", (e) => {
+      e.preventDefault();
+      $$(".tab", scope).forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      
+      const targetSel = tab.getAttribute("data-target");
+      if (!targetSel) return;
 
-let db = {}; // Dữ liệu sẽ được tải từ GitHub
-let lastKnownSha; // Dùng để update file trên GitHub
-
-/** GitHub API Functions **/
-async function loadDataFromGithub() {
-  const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-  try {
-    const response = await fetch(url, {
-      headers: { 'Accept': 'application/vnd.github.v3.raw' }
+      if (targetSel.startsWith("#view-")) {
+        show(targetSel);
+      } else { 
+        $$(".tab-pane", scope).forEach(p => p.style.display = "none");
+        const pane = $(`#${targetSel}`, scope);
+        if (pane) pane.style.display = "block";
+      }
     });
-    if (!response.ok) {
-        if (response.status === 404) { // File không tồn tại, tạo dữ liệu mặc định
-            console.warn("data.json not found on GitHub. Initializing with default data.");
-            return getDefaultData();
-        }
-        throw new Error(`GitHub API Error: ${response.statusText}`);
-    }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Failed to load data from GitHub:", error);
-    alert("Không thể tải dữ liệu từ GitHub. Vui lòng kiểm tra lại cấu hình và kết nối mạng.");
-    return getDefaultData(); // Trả về dữ liệu mặc định nếu lỗi
+  });
+}
+
+function setSession(user) {
+  if (user) localStorage.setItem("sessionUser", JSON.stringify(user));
+  else localStorage.removeItem("sessionUser");
+}
+function getSession() {
+  try {
+    return JSON.parse(localStorage.getItem("sessionUser") || "null");
+  } catch {
+    return null;
   }
 }
 
-async function saveDataToGithub() {
-    // Lấy SHA mới nhất của file trước khi ghi
-    try {
-        const response = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`);
-        if(response.ok) {
-            const fileInfo = await response.json();
-            lastKnownSha = fileInfo.sha;
-        } else if(response.status !== 404) { // Bỏ qua lỗi 404 vì file có thể chưa tồn tại
-             throw new Error(`Failed to get file SHA: ${response.statusText}`);
-        }
-    } catch (error) {
-        console.error(error);
-        // Không dừng lại nếu chỉ không lấy được SHA, thử ghi mà không có nó
-    }
-
-    const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(db, null, 2)))); // Encode to base64
-
-    const body = {
-        message: `Data update: ${new Date().toISOString()}`,
-        content: content,
-        sha: lastKnownSha // Cung cấp SHA nếu có để tránh conflict
-    };
-
-    try {
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `token ${GITHUB_CONFIG.token}`,
-                'Accept': 'application/vnd.github.v3+json'
-            },
-            body: JSON.stringify(body)
-        });
-
-        if (!response.ok) {
-            throw new Error(`GitHub API Error: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        lastKnownSha = result.content.sha; // Cập nhật SHA sau khi ghi thành công
-        console.log("Data saved to GitHub successfully.");
-    } catch (error) {
-        console.error("Failed to save data to GitHub:", error);
-        alert("Lưu dữ liệu lên GitHub thất bại!");
-    }
-}
-
-function getDefaultData() {
-    return {
-      users:[
-        {username:"nhaplieu",password:"123456",role:"nhap_lieu"},
-        {username:"ketoan",password:"123456",role:"ke_toan"},
-        {username:"admin",password:"123456",role:"admin"}
-      ],
-      employees:[],
-      entryMonthly:[],
-      payrolls:[]
-    };
-}
-
-// Thay thế hàm save cũ
-const save = saveDataToGithub;
-
-// ----- Các hàm còn lại của ứng dụng (giữ nguyên không thay đổi nhiều) -----
-const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
-const uid=()=>Math.random().toString(36).slice(2,10);
-const fmt=n=>(n||0).toLocaleString('vi-VN');
-
-/** Views **/
-function show(id){ $$(".view").forEach(v=>v.classList.remove("active")); $(id).classList.add("active"); }
-function activateTabs(targetId){
-  $$(".tab").forEach(t=>{
-    if(t.dataset.target===targetId){ t.classList.add("active"); }
-    else{ t.classList.remove("active"); }
-  });
-}
-function refreshStats(){
-  $("#stat-emps").textContent = db.employees.length;
-  $("#stat-rows").textContent = db.entryMonthly.length;
-}
-
-/** Session helpers (sử dụng localStorage cho session là ổn) **/
-function setSession(user){
-  if(user){ localStorage.setItem("currentUser", JSON.stringify(user)); }
-  else{ localStorage.removeItem("currentUser"); }
-}
-function getSession(){ try{ return JSON.parse(localStorage.getItem("currentUser")||"null"); }catch(e){return null;} }
-
-/** Login **/
-$("#btn-login").addEventListener("click", ()=>{
-  const u=$("#login-username").value.trim(), p=$("#login-password").value;
-  const user=db.users.find(x=>x.username===u && x.password===p);
-  if(!user){ alert("Sai tài khoản hoặc mật khẩu"); return; }
-  window.currentUser=user; setSession(user);
-  $("#userBox").textContent = `${user.username} (${user.role})`; $("#btn-logout").style.display="inline-flex";
-  $$(".role-nhap_lieu").forEach(el=> el.style.display = (["nhap_lieu","admin"].includes(user.role)?"":"none"));
-  $$(".role-ke_toan").forEach(el=> el.style.display = (["ke_toan","admin"].includes(user.role)?"":"none"));
-  $$(".role-admin").forEach(el=> el.style.display = (user.role==="admin"?"":"none"));
-  show("#view-dashboard"); activateTabs("#view-dashboard"); initDefaults(); refreshStats();
-});
-$("#btn-logout").onclick=()=>{ setSession(null); location.reload(); };
-
-/** Global tab navigation **/
-document.addEventListener("click", (e)=>{
-  const btn = e.target.closest(".tab");
-  if(!btn || !btn.dataset.target) return;
-  const target = btn.dataset.target;
-  if(getComputedStyle(btn).display==="none") return;
-  if(!window.currentUser){ alert("Vui lòng đăng nhập"); return; }
-  show(target); activateTabs(target);
-});
-
-/** Export/Import/Reset **/
-$("#btn-export").onclick=()=>{
-  const blob = new Blob([JSON.stringify(db, null, 2)], {type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob); a.download = "timesheet_data.json"; a.click();
-  URL.revokeObjectURL(a.href);
+/** ================== DỮ LIỆU ỨNG DỤNG ================== **/
+let appData = {
+  users: [
+    { username: "nhaplieu", password: "123456", role: "nhap_lieu" },
+    { username: "ketoan",   password: "123456", role: "ke_toan"   },
+    { username: "admin",    password: "123456", role: "admin"     }
+  ],
+  employees: [],
+  entryMonthly: [],
+  payrolls: []
 };
-$("#import-file").addEventListener("change", async e=>{
-  const f=e.target.files[0]; if(!f) return;
-  try{
-    const json = JSON.parse(await f.text());
-    db=json; await save(); alert("Đã nhập và lưu dữ liệu lên GitHub."); refreshStats(); renderEntryTable(); renderPayroll();
-  }catch(err){ alert("File JSON không hợp lệ"); }
-});
-$("#btn-reset").onclick=async ()=>{ if(confirm("Xóa toàn bộ dữ liệu trên GitHub?")){ db = getDefaultData(); await save(); setSession(null); location.reload(); } };
+window.currentUser = null;
 
 
-// ====== Auto-save monthly JSON (Entry) ======
-function buildMonthJson(month){
-  const rows = db.entryMonthly.filter(r=>r.month===month);
-  const entries = rows.map(r=>{
-    const emp = db.employees.find(e=>e.id===r.employeeId) || {};
-    return {
-      month,
-      employeeId: r.employeeId,
-      nameVi: emp.nameVi||"",
-      nameEn: emp.nameEn||"",
-      code: emp.code||"",
-      bankAcc: emp.bankAcc||"",
-      bankName: emp.bankName||"",
-      className: emp.className||"",
-      hourlyRate: Number(emp.hourlyRate||0),
-      totalSessions: Number(r.totalSessions||0),
-      totalHours: Number(r.totalHours||0)
-    };
-  });
-  const payload = { month, generatedAt: new Date().toISOString(), entries };
-  const prs = db.payrolls.filter(p=>p.month===month);
-  if(prs.length) payload.payrolls = prs; // có thì kèm payroll
-  return payload;
-}
-async function autoSaveMonthFile(month){
-  const json = JSON.stringify(buildMonthJson(month), null, 2);
-  const suggestedName = `chamcong_${month}.json`;
-  try{
-    if('showSaveFilePicker' in window){
-      const handle = await window.showSaveFilePicker({
-        suggestedName,
-        types: [{description:"JSON", accept:{'application/json':['.json']}}]
-      });
-      const writable = await handle.createWritable();
-      await writable.write(json);
-      await writable.close();
-      return true;
-    }
-  }catch(e){
-    console.warn("FS Access save failed; fallback to download", e);
-  }
-  const blob = new Blob([json], {type:"application/json"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download=suggestedName;
-  a.click();
-  URL.revokeObjectURL(a.href);
-  return true;
-};
+/** ============= FIRESTORE DATA HANDLING ============= **/
+async function loadInitialData() {
+  console.log("Loading initial data from Firestore...");
+  try {
+    const [employeesSnapshot, entryMonthlySnapshot, payrollsSnapshot] = await Promise.all([
+      dbFs.collection("employees").get(),
+      dbFs.collection("entryMonthly").get(),
+      dbFs.collection("payrolls").get()
+    ]);
 
-/** ---------------- Nhập liệu (bảng tháng) ---------------- **/
-const entryCols = [
-  "nameVi","nameEn","code","bankAcc","bankName","className","totalSessions","totalHours"
-];
-
-function renderEntryTable(){
-  const month = $("#en-month").value;
-  const tbody = $("#tbl-entry tbody");
-  tbody.innerHTML = "";
-  if(!month) return;
-  const rows = db.entryMonthly.filter(r=>r.month===month);
-  rows.forEach(r=>{
-    const emp = db.employees.find(e=>e.id===r.employeeId) || {};
-    const tr=document.createElement("tr");
-    tr.innerHTML = `
-      <td><input value="${emp.nameVi||""}" data-emp="${emp.id||""}" data-field="nameVi"></td>
-      <td><input value="${emp.nameEn||""}" data-emp="${emp.id||""}" data-field="nameEn"></td>
-      <td><input value="${emp.code||""}" data-emp="${emp.id||""}" data-field="code"></td>
-      <td><input value="${emp.bankAcc||""}" data-emp="${emp.id||""}" data-field="bankAcc"></td>
-      <td><input value="${emp.bankName||""}" data-emp="${emp.id||""}" data-field="bankName"></td>
-      <td><input value="${emp.className||""}" data-emp="${emp.id||""}" data-field="className"></td>
-      <td><input type="number" step="0.5" value="${r.totalSessions||0}" data-row="${r.id}" data-field="totalSessions"></td>
-      <td><input type="number" step="0.25" value="${r.totalHours||0}" data-row="${r.id}" data-field="totalHours"></td>
-      <td><button class="btn danger" data-del="${r.id}">Xóa</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
-  // wiring
-  $$("#tbl-entry [data-emp]").forEach(inp=>{
-    inp.oninput=()=>{
-      const empId = inp.getAttribute("data-emp");
-      const field = inp.getAttribute("data-field");
-      let emp = db.employees.find(e=>e.id===empId);
-      if(!emp){
-        emp = {id: uid()}; db.employees.push(emp);
-        inp.closest("tr").querySelectorAll("[data-emp]").forEach(el=>el.setAttribute("data-emp", emp.id));
-        const month = $("#en-month").value;
-        let row = db.entryMonthly.find(r=>r.employeeId===emp.id && r.month===month);
-        if(!row){ db.entryMonthly.push({id:uid(), employeeId:emp.id, month, totalSessions:0, totalHours:0}); }
-      }
-      emp[field]=inp.value;
-      save();
-    };
-  });
-  $$("#tbl-entry [data-row]").forEach(inp=>{
-    inp.oninput=()=>{
-      const rowId = inp.getAttribute("data-row");
-      const field = inp.getAttribute("data-field");
-      const row = db.entryMonthly.find(r=>r.id===rowId); if(!row) return;
-      row[field] = Number(inp.value||0);
-      save();
-    };
-  });
-  $$("#tbl-entry [data-del]").forEach(btn=>{
-    btn.onclick=()=>{
-      const id = btn.getAttribute("data-del");
-      const row = db.entryMonthly.find(r=>r.id===id);
-      if(!row) return;
-      if(confirm("Xóa dòng này?")){
-        db.entryMonthly = db.entryMonthly.filter(r=>r.id!==id);
-        save(); renderEntryTable(); refreshStats();
-      }
-    };
-  });
-};
-
-$("#btn-en-newrow").onclick=()=>{
-  if(!["nhap_lieu","admin"].includes(window.currentUser?.role||"")){
-    alert("Bạn không có quyền vào trang Nhập liệu.");
-    return;
-  }
-  const month=$("#en-month").value; if(!month){ alert("Chọn tháng"); return; }
-  const emp={id:uid(), nameVi:"", nameEn:"", code:"", bankAcc:"", bankName:"", className:""};
-  db.employees.push(emp);
-  db.entryMonthly.push({id:uid(), employeeId:emp.id, month, totalSessions:0, totalHours:0});
-  save(); renderEntryTable(); refreshStats();
-};
-$("#btn-en-save").onclick=async ()=>{
-  if(!["nhap_lieu","admin"].includes(window.currentUser?.role||"")){
-    alert("Bạn không có quyền lưu."); return;
-  }
-  const month=$("#en-month").value; if(!month){ alert("Chọn tháng"); return; }
-  await save();
-  await autoSaveMonthFile(month); // Chức năng này vẫn là tải file về máy người dùng
-  alert("Đã lưu dữ liệu lên GitHub & xuất JSON tháng.");
-};
-
-
-$("#en-month").addEventListener("change", ()=>{
-  localStorage.setItem("lastMonth_en", $("#en-month").value||"");
-  renderEntryTable();
-});
-
-// Copy previous month employees
-$("#btn-en-copy").onclick=()=>{
-  if(!["nhap_lieu","admin"].includes(window.currentUser?.role||"")){ alert("Bạn không có quyền."); return; }
-  const month = $("#en-month").value; if(!month){ alert("Chọn tháng hiện tại"); return; }
-  const d=new Date(month+"-01"); d.setMonth(d.getMonth()-1);
-  const prev = d.toISOString().slice(0,7);
-  const prevRows = db.entryMonthly.filter(r=>r.month===prev);
-  if(prevRows.length===0){ alert("Không có dữ liệu tháng trước để sao chép."); return; }
-  if(!confirm(`Sao chép danh sách nhân sự từ ${prev} sang ${month}? (không sao chép số liệu)`)) return;
-  const existIds = new Set(db.entryMonthly.filter(r=>r.month===month).map(r=>r.employeeId));
-  prevRows.forEach(pr=>{
-    if(!existIds.has(pr.employeeId)){
-      db.entryMonthly.push({id:uid(), employeeId:pr.employeeId, month, totalSessions:0, totalHours:0});
-    }
-  });
-  save(); renderEntryTable(); refreshStats();
-};
-
-/** ---------------- Kế toán ---------------- **/
-function buildPayroll(month){
-  db.employees.forEach(emp=>{
-    const row = db.entryMonthly.find(r=>r.employeeId===emp.id && r.month===month);
-    if(!row) return;
-    let pr = db.payrolls.find(p=>p.employeeId===emp.id && p.month===month);
-    const totalHours = Number(row.totalHours||0);
-    const hourlyRate = Number(emp.hourlyRate||0);
-    const gross = totalHours * hourlyRate;
-    if(!pr){
-      const insurance = Math.round(gross*0.105);
-      const net = gross - insurance;
-      pr = {id:uid(), employeeId:emp.id, month, totalSessions:row.totalSessions||0, totalHours, hourlyRate,
-            gross, insurance, net, advance:0, balance:net, locked:false};
-      db.payrolls.push(pr);
-    }else if(!pr.locked){
-      pr.totalSessions = row.totalSessions||0;
-      pr.totalHours = totalHours;
-      pr.hourlyRate = hourlyRate;
-      pr.gross = gross;
-      pr.net = (pr.gross||0) - (pr.insurance||0);
-      pr.balance = (pr.net||0) - (pr.advance||0);
-    }
-  });
-  save();
-}
-
-function renderPayroll(){
-  const month=$("#pr-month").value; if(!month) return;
-  const tbody=$("#tbl-pr tbody"); tbody.innerHTML="";
-  const rows=db.payrolls.filter(p=>p.month===month);
-  rows.forEach(p=>{
-    const emp=db.employees.find(e=>e.id===p.employeeId)||{};
-    const tr=document.createElement("tr");
-    tr.innerHTML=`
-      <td>${emp.nameVi||""}</td>
-      <td>${p.totalHours||0}</td>
-      <td><input data-id="${p.id}" data-field="hourlyRate" type="number" value="${p.hourlyRate||0}" ${p.locked?"disabled":""}></td>
-      <td>${fmt(p.gross||0)}</td>
-      <td><input data-id="${p.id}" data-field="insurance" type="number" value="${p.insurance||0}" ${p.locked?"disabled":""}></td>
-      <td>${fmt(p.net||0)}</td>
-      <td><input data-id="${p.id}" data-field="advance" type="number" value="${p.advance||0}" ${p.locked?"disabled":""}></td>
-      <td>${fmt(p.balance||0)}</td>
-      <td style="display:flex; gap: 4px;">
-        <button class="btn small" data-slip="${p.id}">Slip</button>
-        <button class="btn small" data-phieuchi="${p.id}">Phiếu chi</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-  $$("#tbl-pr input").forEach(inp=>{
-    inp.oninput=()=>{
-      const id=inp.dataset.id, field=inp.dataset.field;
-      const pr=db.payrolls.find(x=>x.id===id); if(!pr||pr.locked) return;
-      pr[field]=Number(inp.value||0);
-      if(field==="hourlyRate"){
-        const emp=db.employees.find(e=>e.id===pr.employeeId); if(emp){ emp.hourlyRate=pr.hourlyRate; }
-        pr.gross=(pr.totalHours||0)*(pr.hourlyRate||0);
-      }
-      pr.net=(pr.gross||0)-(pr.insurance||0);
-      pr.balance=(pr.net||0)-(pr.advance||0);
-      save(); renderPayroll();
-    };
-  });
-  $$("#tbl-pr [data-slip]").forEach(btn=> btn.onclick=()=> openSlip(btn.dataset.slip));
-  $$("#tbl-pr [data-phieuchi]").forEach(btn=> btn.onclick=()=> openPhieuChi(btn.dataset.phieuchi));
-}
-$("#btn-pr-build").onclick=()=>{
-  if(!["ke_toan","admin"].includes(window.currentUser?.role||"")){ alert("Bạn không có quyền."); return; }
-  const month=$("#pr-month").value; if(!month){ alert("Chọn tháng"); return; }
-  buildPayroll(month); renderPayroll(); refreshStats(); alert("Đã tổng hợp tháng.");
-};
-$("#btn-pr-lock").onclick=()=>{
-  if(!["ke_toan","admin"].includes(window.currentUser?.role||"")){ alert("Bạn không có quyền."); return; }
-  const month=$("#pr-month").value; if(!month){ alert("Chọn tháng"); return; }
-  db.payrolls.filter(p=>p.month===month).forEach(p=> p.locked=true);
-  save(); renderPayroll(); alert("Đã khóa tháng.");
-};
-$("#pr-month").addEventListener("change", ()=>{
-  localStorage.setItem("lastMonth_pr", $("#pr-month").value||"");
-  renderPayroll();
-});
-
-$("#btn-pr-export").onclick=()=>{
-  const month=$("#pr-month").value; if(!month){ alert("Chọn tháng"); return; }
-  const rows=db.payrolls.filter(p=>p.month===month);
-  if(rows.length===0){ alert("Chưa có dữ liệu payroll cho tháng này."); return; }
-  const header=["Thang","Ten NV","Ten EN","Ma NV","So TK","Ngan hang","Lop","Gio","Rate","Gross","BHXH","Net","Ung","Con lai"];
-  const lines=[header.join(",")];
-  rows.forEach(p=>{
-    const emp=db.employees.find(e=>e.id===p.employeeId)||{};
-    const vals=[
-      p.month, (emp.nameVi||"").replaceAll(","," "), (emp.nameEn||"").replaceAll(","," "),
-      emp.code||"", emp.bankAcc||"", emp.bankName||"", emp.className||"",
-      p.totalHours||0, p.hourlyRate||0, p.gross||0, p.insurance||0, p.net||0, p.advance||0, p.balance||0
-    ];
-    lines.push(vals.join(","));
-  });
-  const csv=lines.join("\n");
-  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob); a.download=`payroll_${month}.csv`; a.click();
-  URL.revokeObjectURL(a.href);
-};
-
-/** ---------------- Admin ---------------- **/
-$("#btn-ad-refresh").onclick=()=>{
-  const month=$("#ad-month").value; const tbody=$("#tbl-ad tbody"); tbody.innerHTML="";
-  if(!month) return;
-  const rows=db.payrolls.filter(p=>p.month===month);
-  let totalNet=0;
-  rows.forEach(p=>{
-    const emp=db.employees.find(e=>e.id===p.employeeId)||{};
-    totalNet+=p.net||0;
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${emp.nameVi||""}</td><td>${p.totalHours||0}</td><td>${fmt(p.gross||0)}</td>
-      <td>${fmt(p.insurance||0)}</td><td>${fmt(p.net||0)}</td><td>${fmt(p.advance||0)}</td><td>${fmt(p.balance||0)}</td>`;
-    tbody.appendChild(tr);
-  });
-  $("#ad-total-net").textContent=fmt(totalNet);
-};
-
-/** ---------------- Slip ---------------- **/
-// ... (Hàm openSlip không thay đổi)
-function openSlip(payrollId){
-  const pr=db.payrolls.find(p=>p.id===payrollId); if(!pr) return;
-  const emp=db.employees.find(e=>e.id===pr.employeeId)||{};
-  $("#slip-content").innerHTML=`
-    <div class="slip-body">
-      <div class="kv"><label>Tháng</label><div>${pr.month}</div></div>
-      <div class="kv"><label>Tên nhân viên</label><div>${emp.nameVi||""}${emp.nameEn?(" ("+emp.nameEn+")"):""}</div></div>
-      <div class="kv"><label>Mã NV</label><div>${emp.code||"-"}</div></div>
-      <div class="kv"><label>Số TK</label><div>${emp.bankAcc||"-"}</div></div>
-      <div class="kv"><label>Ngân hàng</label><div>${emp.bankName||"-"}</div></div>
-      <div class="kv"><label>Lớp</label><div>${emp.className||"-"}</div></div>
-    </div>
-    <table class="slip-table">
-      <thead><tr><th>Mục</th><th>Giá trị</th></tr></thead>
-      <tbody>
-        <tr><td>Tổng số buổi dạy</td><td>${pr.totalSessions||0}</td></tr>
-        <tr><td>Tổng số giờ dạy</td><td>${pr.totalHours||0}</td></tr>
-        <tr><td>Lương theo giờ (VND)</td><td>${fmt(pr.hourlyRate||0)}</td></tr>
-        <tr><td>Tổng lương (Gross)</td><td>${fmt(pr.gross||0)}</td></tr>
-        <tr><td>Bảo hiểm xã hội</td><td>${fmt(pr.insurance||0)}</td></tr>
-        <tr><td>Lương thực nhận (Net)</td><td>${fmt(pr.net||0)}</td></tr>
-        <tr><td>Paid in advance</td><td>${fmt(pr.advance||0)}</td></tr>
-        <tr><td><b>Balance</b></td><td><b>${fmt(pr.balance||0)}</b></td></tr>
-      </tbody>
-    </table>
-  `;
-  const dlg=$("#dlg-slip"); dlg.showModal();
-  $("#btn-slip-close").onclick=()=>dlg.close();
-  $("#btn-slip-print").onclick=()=>window.print();
-}
-
-/** ---------------- Phieu Chi ---------------- **/
-// ... (Hàm docso và openPhieuChi không thay đổi)
-function docso(so) {
-    const mangso = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
-    function dochangchuc(so, daydu) {
-        var chuoi = "";
-        const chuc = Math.floor(so / 10);
-        const donvi = so % 10;
-        if (chuc > 1) { chuoi = " " + mangso[chuc] + " mươi"; if (donvi == 1) { chuoi += " mốt"; } }
-        else if (chuc == 1) { chuoi = " mười"; if (donvi == 1) { chuoi += " một"; } }
-        else if (daydu && donvi > 0) { chuoi = " lẻ"; }
-        if (donvi == 5 && chuc > 1) { chuoi += " lăm"; }
-        else if (donvi > 1 || (donvi == 1 && chuc == 0)) { chuoi += " " + mangso[donvi]; }
-        return chuoi;
-    }
-    function docblock(so, daydu) {
-        var chuoi = "";
-        const tram = Math.floor(so / 100);
-        so = so % 100;
-        if (daydu || tram > 0) { chuoi = " " + mangso[tram] + " trăm"; chuoi += dochangchuc(so, true); }
-        else { chuoi = dochangchuc(so, false); }
-        return chuoi;
-    }
-    function dochangtrieu(so) {
-        if (so == 0) return "";
-        var chuoi = "";
-        var trieu = Math.floor(so / 1000000);
-        so = so % 1000000;
-        if (trieu > 0) { chuoi = docblock(trieu, false) + " triệu"; }
-        var nghin = Math.floor(so / 1000);
-        so = so % 1000;
-        if (nghin > 0) { chuoi += docblock(nghin, false) + " nghìn"; }
-        if (so > 0) { chuoi += docblock(so, false); }
-        return chuoi;
-    }
-    if (so == 0) return mangso[0];
-    var chuoi = "", hauto = "";
-    do {
-        const ty = so % 1000000000;
-        so = Math.floor(so / 1000000000);
-        if (so > 0) { chuoi = dochangtrieu(ty) + hauto + chuoi; }
-        else { chuoi = dochangtrieu(ty) + hauto + chuoi; }
-        hauto = " tỷ";
-    } while (so > 0);
-    let result = chuoi.trim();
-    result = result[0].toUpperCase() + result.slice(1);
-    return result;
-}
-
-function openPhieuChi(payrollId) {
-    const pr = db.payrolls.find(p => p.id === payrollId); if (!pr) return;
-    const emp = db.employees.find(e => e.id === pr.employeeId) || {};
-    const today = new Date();
-    const balanceAmount = pr.balance || 0;
+    appData.employees = employeesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    appData.entryMonthly = entryMonthlySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    appData.payrolls = payrollsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
-    const contentHTML = `
-        <div id="phieu-chi-print-area">
-            <header class="header">
-                <h1>T&T GROUP</h1>
-                <h2>PHIẾU CHI</h2>
-                <p>Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}</p>
-            </header>
-            <section class="info-section">
-                <div class="info-left">
-                    <div class="info-row">
-                        <label>Họ và tên người nhận tiền:</label>
-                        <span>${emp.nameVi || ""}</span>
-                    </div>
-                    <div class="info-row">
-                        <label>Địa chỉ:</label>
-                        <span>&nbsp;</span>
-                    </div>
-                    <div class="info-row">
-                        <label>Lý do chi:</label>
-                        <span>Thanh toán lương tháng ${pr.month}</span>
-                    </div>
-                </div>
-                <div class="info-right">
-                    <p><strong>Số:</strong></p>
-                    <p><strong>Nợ:</strong></p>
-                    <p><strong>Có:</strong></p>
-                </div>
-            </section>
-            <table class="payment-table">
-                <thead><tr><th>DIỄN GIẢI</th><th>SỐ TIỀN (VND)</th><th>GHI CHÚ</th></tr></thead>
-                <tbody>
-                    <tr><td>Thanh toán lương tháng ${pr.month}</td><td class="amount-col">${fmt(balanceAmount)}</td><td></td></tr>
-                    <tr class="total-row"><td>TỔNG CỘNG</td><td class="amount-col">${fmt(balanceAmount)}</td><td></td></tr>
-                </tbody>
-            </table>
-            <section class="summary-section">
-                <p><strong>Số tiền viết bằng chữ:</strong> <span>${docso(balanceAmount)} đồng chẵn.</span></p>
-                <p><strong>Kèm theo:</strong> <span>0</span> chứng từ gốc.</p>
-            </section>
-            <footer class="signature-section">
-                <div class="signature-box"><p>Giám đốc</p><p class="note">(Ký, họ tên, đóng dấu)</p></div>
-                <div class="signature-box"><p>Kế toán trưởng</p><p class="note">(Ký, họ tên)</p></div>
-                <div class="signature-box"><p>Kế toán</p><p class="note">(Ký, họ tên)</p></div>
-                <div class="signature-box"><p>Người lập phiếu</p><p class="note">(Ký, họ tên)</p></div>
-                <div class="signature-box"><p>Thủ quỹ</p><p class="note">(Ký, họ tên)</p></div>
-            </footer>
-        </div>
-        <div id="phieu-chi-controls">
-            <button id="btn-phieuchi-close" class="btn">Đóng</button>
-            <button id="btn-phieuchi-print" class="btn primary">In / Lưu PDF</button>
-        </div>
-    `;
-
-    const dlg = $("#dlg-phieu-chi");
-    $("#phieu-chi-content").innerHTML = contentHTML;
-    dlg.showModal();
-    $("#btn-phieuchi-close").onclick = () => dlg.close();
-    $("#btn-phieuchi-print").onclick = () => window.print();
-}
-
-/** Init defaults **/
-function initDefaults(){
-  const now=new Date(), ym=now.toISOString().slice(0,7);
-  if(!$("#en-month").value) $("#en-month").value = localStorage.getItem("lastMonth_en") || ym;
-  if(!$("#pr-month").value) $("#pr-month").value = localStorage.getItem("lastMonth_pr") || ym;
-  if(!$("#ad-month").value) $("#ad-month").value = ym;
-  renderEntryTable(); renderPayroll();
-}
-
-/** Auto-login if session exists */
-window.addEventListener("DOMContentLoaded", async ()=>{
-  // Tải dữ liệu từ GitHub trước
-  db = await loadDataFromGithub();
-
-  // Sau khi có dữ liệu, tiếp tục logic như cũ
-  const user=getSession();
-  if(user && db.users.find(u => u.username === user.username)){ // Kiểm tra user session có hợp lệ với db mới không
-    window.currentUser=user;
-    $("#userBox").textContent = `${user.username} (${user.role})`;
-    $("#btn-logout").style.display="inline-flex";
-    $$(".role-nhap_lieu").forEach(el=> el.style.display = (["nhap_lieu","admin"].includes(user.role)?"":"none"));
-    $$(".role-ke_toan").forEach(el=> el.style.display = (["ke_toan","admin"].includes(user.role)?"":"none"));
-    $$(".role-admin").forEach(el=> el.style.display = (user.role==="admin"?"":"none"));
-    show("#view-dashboard"); activateTabs("#view-dashboard"); initDefaults(); refreshStats();
-  }else{
-    show("#view-login"); activateTabs("#view-dashboard");
+    console.log("Data loaded!", appData);
+    refreshStats();
+  } catch (error) {
+    console.error("Error loading initial data: ", error);
+    alert("Lỗi khi tải dữ liệu ban đầu. Vui lòng kiểm tra kết nối mạng và F5 lại trang.");
   }
-});
+}
+
+/** ============= UI RENDERING & LOGIC ============= **/
+
+function createEntryRowHtml(entry = {}) {
+    const employee = appData.employees.find(e => e.id === entry.employeeId) || {};
+    
+    return `
+        <td><input type="text" class="en-nameVi" placeholder="Tên tiếng Việt" value="${employee.nameVi || ''}"></td>
+        <td><input type="text" class="en-nameEn" placeholder="Tên tiếng Anh" value="${employee.nameEn || ''}"></td>
+        <td><input type="text" class="en-code" placeholder="Mã NV" value="${employee.code || ''}"></td>
+        <td><input type="text" class="en-bankAcc" placeholder="Số tài khoản" value="${employee.bankAcc || ''}"></td>
+        <td><input type="text" class="en-bankName" placeholder="Ngân hàng" value="${employee.bankName || ''}"></td>
+        <td><input type="text" class="en-className" placeholder="Lớp" value="${employee.className || ''}"></td>
+        <td><input type="number" class="en-totalSessions" step="0.5" placeholder="Buổi" value="${entry.totalSessions || 0}"></td>
+        <td><input type="number" class="en-totalHours" step="0.25" placeholder="Giờ" value="${entry.totalHours || 0}"></td>
+        <td><button class="btn danger small btn-en-deleterow">Xóa</button></td>
+    `;
+}
+
+function addEmptyEntryRow() {
+    const tableBody = $("#tbl-entry tbody");
+    if (!tableBody) return;
+    const newRow = tableBody.insertRow();
+    newRow.innerHTML = createEntryRowHtml();
+}
+
+function refreshStats() {
+  $("#stat-emps").textContent = appData.employees.length;
+  $("#stat-rows").textContent = appData.entryMonthly.length;
+}
+
+/** ============= KHỞI ĐỘNG ỨNG DỤNG ============= **/
+async function main() {
+  const s = getSession();
+  if (s) window.currentUser = s;
+
+  if (window.currentUser) {
+    $("#userBox").textContent = `${window.currentUser.username} (${window.currentUser.role})`;
+    $("#btn-logout").style.display = "inline-flex";
+    $$(".role-nhap_lieu").forEach(el => el.style.display = (["nhap_lieu", "admin"].includes(window.currentUser.role) ? "" : "none"));
+    $$(".role-ke_toan").forEach(el => el.style.display = (["ke_toan", "admin"].includes(window.currentUser.role) ? "" : "none"));
+    $$(".role-admin").forEach(el => el.style.display = (window.currentUser.role === "admin" ? "" : "none"));
+    
+    show("#view-dashboard");
+    activateTabs(".topbar");
+    activateTabs("#view-dashboard");
+    initDefaults();
+
+    await loadInitialData();
+  } else {
+    show("#view-login");
+  }
+
+  /** ====== GẮN SỰ KIỆN CHO CÁC NÚT ====== **/
+  const btnLogin = $("#btn-login");
+  if (btnLogin) btnLogin.addEventListener("click", async () => {
+    const u = $("#login-username").value.trim(), p = $("#login-password").value;
+    const user = appData.users.find(x => x.username === u && x.password === p);
+    if (!user) { alert("Sai tài khoản hoặc mật khẩu"); return; }
+    window.currentUser = user; setSession(user);
+    location.reload(); 
+  });
+
+  const btnLogout = $("#btn-logout");
+  if (btnLogout) btnLogout.onclick = () => { setSession(null); location.reload(); };
+  
+  const exportBtnContainer = $("#view-dashboard .card.soft");
+  if (exportBtnContainer) exportBtnContainer.remove();
+  
+  const btnSaveMonth = $("#btn-en-save");
+  if (btnSaveMonth) btnSaveMonth.onclick = async () => {
+    const month = $("#en-month").value;
+    if (!month) {
+        alert("Vui lòng chọn tháng để lưu.");
+        return;
+    }
+    
+    const rows = $$("#tbl-entry tbody tr");
+    if (rows.length === 0) {
+        alert("Không có dữ liệu nào để lưu.");
+        return;
+    }
+
+    btnSaveMonth.textContent = "Đang lưu...";
+    btnSaveMonth.disabled = true;
+
+    try {
+        const batch = dbFs.batch();
+
+        for (const row of rows) {
+            const code = row.querySelector(".en-code").value.trim();
+            if (!code) {
+                alert("Mã số nhân viên là bắt buộc. Vui lòng kiểm tra lại các dòng.");
+                row.querySelector(".en-code").focus();
+                throw new Error("Mã nhân viên trống.");
+            }
+
+            // 1. Tìm hoặc tạo ID nhân viên
+            let employee = appData.employees.find(e => e.code === code);
+            let employeeRef;
+
+            if (employee) {
+                employeeRef = dbFs.collection("employees").doc(employee.id);
+            } else {
+                employeeRef = dbFs.collection("employees").doc();
+                employee = { id: employeeRef.id, code: code }; // Tạo đối tượng tạm để có ID
+            }
+            
+            // 2. Chuẩn bị dữ liệu nhân viên để lưu/cập nhật
+            const employeeData = {
+                code: code,
+                nameVi: row.querySelector(".en-nameVi").value.trim(),
+                nameEn: row.querySelector(".en-nameEn").value.trim(),
+                bankAcc: row.querySelector(".en-bankAcc").value.trim(),
+                bankName: row.querySelector(".en-bankName").value.trim(),
+                className: row.querySelector(".en-className").value.trim(),
+            };
+            batch.set(employeeRef, employeeData, { merge: true });
+
+            // 3. Chuẩn bị dữ liệu chấm công tháng
+            const entryId = `${month}_${employee.id}`;
+            const entryRef = dbFs.collection("entryMonthly").doc(entryId);
+            const entryData = {
+                id: entryId,
+                month: month,
+                employeeId: employee.id,
+                totalSessions: parseFloat(row.querySelector(".en-totalSessions").value) || 0,
+                totalHours: parseFloat(row.querySelector(".en-totalHours").value) || 0,
+            };
+            batch.set(entryRef, entryData, { merge: true });
+        }
+
+        await batch.commit();
+
+        alert(`Đã lưu thành công dữ liệu cho ${rows.length} nhân viên vào tháng ${month}!`);
+        await loadInitialData();
+
+    } catch (error) {
+        console.error("Lỗi khi lưu dữ liệu: ", error);
+        alert("Đã xảy ra lỗi. Vui lòng kiểm tra lại dữ liệu hoặc xem console log.");
+    } finally {
+        btnSaveMonth.textContent = "Lưu tháng";
+        btnSaveMonth.disabled = false;
+    }
+  };
+
+  /** ====== GẮN SỰ KIỆN CHO CÁC NÚT NHẬP LIỆU ====== **/
+  const btnNewRow = $("#btn-en-newrow");
+  if (btnNewRow) {
+    btnNewRow.addEventListener("click", addEmptyEntryRow);
+  }
+
+  const btnCopyMonth = $("#btn-en-copy");
+    if (btnCopyMonth) {
+        btnCopyMonth.addEventListener("click", () => {
+            const currentMonth = $("#en-month").value;
+            if (!currentMonth) {
+                alert("Vui lòng chọn tháng hiện tại để sao chép.");
+                return;
+            }
+
+            const [year, month] = currentMonth.split('-').map(Number);
+            
+            let prevMonthDate = new Date(year, month - 2); 
+            if (month === 1) {
+                prevMonthDate = new Date(year - 1, 11);
+            }
+
+            const prevMonth = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
+            
+            const prevEntries = appData.entryMonthly.filter(e => e.month === prevMonth);
+            
+            $("#tbl-entry tbody").innerHTML = "";
+
+            if (prevEntries.length > 0) {
+                prevEntries.forEach(entry => {
+                    const row = $("#tbl-entry tbody").insertRow();
+                    row.innerHTML = createEntryRowHtml(entry);
+                });
+                alert(`Đã sao chép dữ liệu từ tháng ${prevMonth}.`);
+            } else {
+                alert(`Không tìm thấy dữ liệu cho tháng ${prevMonth}. Vui lòng nhập thủ công hoặc sao chép từ một tháng khác.`);
+            }
+        });
+    }
+
+  const entryTable = $("#tbl-entry");
+  if(entryTable) {
+    entryTable.addEventListener("click", (e) => {
+        if (e.target && e.target.classList.contains('btn-en-deleterow')) {
+            const row = e.target.closest('tr');
+            if(row) row.remove();
+        }
+    });
+  }
+}
+
+window.addEventListener("DOMContentLoaded", main);
+
+
+/** ============= CÁC HÀM PHỤ TRỢ APP ============= **/
+function initDefaults() {
+  const monthInput = $("#en-month");
+  if (monthInput) {
+    if (!monthInput.value) {
+      const d = new Date();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      monthInput.value = `${d.getFullYear()}-${mm}`;
+    }
+
+    // NEW: mỗi khi chọn tháng → load dữ liệu nhập
+    monthInput.addEventListener("change", () => {
+      loadEntriesForMonth(monthInput.value);
+    });
+
+    // Gọi ngay lần đầu khi trang mở
+    loadEntriesForMonth(monthInput.value);
+  }
+}
+
+
+
+
+
+
+async function loadEntriesForMonth(month) {
+  try {
+    const snap = await dbFs.collection("entryMonthly")
+      .where("month", "==", month).get();
+
+    const rows = snap.docs.map(d => d.data());
+
+    // Làm trống bảng nhập
+    const tbody = $("#tbl-entry tbody");
+    tbody.innerHTML = "";
+
+    // Thêm từng dòng
+    for (const entry of rows) {
+      const row = tbody.insertRow();
+      row.innerHTML = createEntryRowHtml(entry);
+    }
+
+    console.log(`Đã load ${rows.length} dòng cho tháng ${month}`);
+  } catch (err) {
+    console.error("Lỗi khi load dữ liệu tháng:", err);
+    alert("Không thể tải dữ liệu tháng từ Firestore.");
+  }
+}

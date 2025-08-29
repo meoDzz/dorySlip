@@ -35,11 +35,15 @@ main{ padding:16px; }
 .table tfoot th{ background:#f9fafb; }
 .table tr:hover td{ background:#fafafa; }
 .table-scroll{ overflow:auto; border:1px solid var(--line); border-radius:8px; }
+.table td input { width: 100%; padding: 4px; border: 1px solid var(--line); border-radius: 4px; }
+.table td input:focus { border-color: var(--pri); outline: none; }
+
 
 .btn{ border:1px solid var(--line); background:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; }
 .btn.primary{ background:var(--pri); color:#fff; border-color:var(--pri); }
 .btn.danger{ background:var(--danger); color:#fff; border-color:var(--danger); }
 .btn.linklike{ background:transparent; border:none; color:var(--pri); cursor:pointer; padding:6px 8px; }
+.btn.small { padding: 4px 8px; font-size: 12px; }
 
 .filebtn{ position:relative; display:inline-flex; align-items:center; gap:8px; }
 
