@@ -257,21 +257,60 @@ input:focus {
     font-size: 12px;
 }
 
-/* PHIẾU LƯƠNG PRINT STYLES */
+/* --- PRINT STYLES --- */
+/* in ấn modal phiếu lương */
 @media print {
+    /* Ẩn tất cả mọi thứ trên trang bằng một quy tắc mạnh */
     body * {
-        visibility: hidden;
+        visibility: hidden !important;
     }
-    #payslip-print-area, #payslip-print-area * {
-        visibility: visible;
+
+    /* Chỉ hiển thị khu vực modal và các phần tử con của nó */
+    #payslip-modal,
+    #payslip-modal *,
+    #payslip-modal-body,
+    #payslip-modal-body * {
+        visibility: visible !important;
     }
-    #payslip-print-area {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
+
+    /* Thiết lập lại các thuộc tính của modal để không gây cản trở */
+    #payslip-modal {
+        position: static !important;
+        background: transparent !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: visible !important;
+    }
+
+    .modal-content {
+        position: static !important;
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Đưa nội dung phiếu lương lên đầu trang in */
+    #payslip-modal-body {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+    }
+
+    /* Ẩn các nút không cần thiết khi in */
+    #pr-actions-container, .modal-close-btn {
+        display: none !important;
     }
 }
+
+
+
+
 
 
 .table .payroll-summary-row {
