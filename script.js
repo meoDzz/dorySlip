@@ -167,6 +167,18 @@ async function main() {
     location.reload(); 
   });
 
+// logout
+    const btnLogout = $("#btn-logout");
+  if (btnLogout) {
+    btnLogout.addEventListener("click", () => {
+      // Xóa thông tin phiên đăng nhập trong localStorage
+      setSession(null);
+      // Đặt người dùng hiện tại về null
+      window.currentUser = null;
+      // Tải lại trang, trình duyệt sẽ tự động hiển thị màn hình đăng nhập
+      location.reload();
+    });
+  }
 /**
  * File: script.js
  * THAY THẾ TOÀN BỘ PHẦN XỬ LÝ SỰ KIỆN CỦA NÚT NÀY
