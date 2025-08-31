@@ -168,17 +168,16 @@ async function main() {
   });
 
 // logout
-    const btnLogout = $("#btn-logout");
-  if (btnLogout) {
+// Đoạn mã mới để thay thế
+const btnLogout = $("#btn-logout");
+if (btnLogout) {
     btnLogout.addEventListener("click", () => {
-      // Xóa thông tin phiên đăng nhập trong localStorage
-      setSession(null);
-      // Đặt người dùng hiện tại về null
-      window.currentUser = null;
-      // Tải lại trang, trình duyệt sẽ tự động hiển thị màn hình đăng nhập
-      location.reload();
+        console.log("Nút đăng xuất được nhấn. Xóa session...");
+        setSession(null); // Xóa session khỏi localStorage
+        window.currentUser = null; // Xóa biến tạm
+        location.reload(); // Tải lại trang để quay về màn hình đăng nhập
     });
-  }
+}
 /**
  * File: script.js
  * THAY THẾ TOÀN BỘ PHẦN XỬ LÝ SỰ KIỆN CỦA NÚT NÀY
@@ -394,6 +393,7 @@ async function loadEntriesForMonth(month) {
  * File: script.js
  * Thay thế hàm cũ bằng hàm đã sửa lỗi này
  */
+// Thay thế TOÀN BỘ hàm cũ bằng hàm này
 async function buildPayrollForMonth() {
     const month = $("#pr-month").value;
     if (!month) {
@@ -415,7 +415,6 @@ async function buildPayrollForMonth() {
             return;
         }
 
-        // Bước 1: Gom nhóm tất cả các lớp dạy theo employeeId
         const entriesByEmployee = entriesForMonth.reduce((acc, entry) => {
             if (!acc[entry.employeeId]) {
                 acc[entry.employeeId] = [];
@@ -424,21 +423,19 @@ async function buildPayrollForMonth() {
             return acc;
         }, {});
 
-        // Bước 2: Lấy danh sách nhân viên đã chấm công và sắp xếp theo tên
         const employeesInMonth = appData.employees
             .filter(emp => entriesByEmployee[emp.id])
             .sort((a, b) => a.nameVi.localeCompare(b.nameVi));
 
-        // Bước 3: Dựng bảng cho từng nhân viên
         for (const employee of employeesInMonth) {
             const employeeEntries = entriesByEmployee[employee.id];
             let totalHoursForEmployee = 0;
             let totalGrossForEmployee = 0;
             
-            // Lấy thông tin lương đã lưu
             const payrollId = `${month}_${employee.id}`;
             const existingPayroll = appData.payrolls.find(p => p.id === payrollId) || {};
-            const rate = existingPayroll.rate || employee.rate || 0;
+            
+            // Lấy các giá trị đã lưu
             const bhxh = existingPayroll.bhxh || employee.bhxh || 0;
             const pitax = existingPayroll.pitax || 0;
             const deductions = existingPayroll.deductions || 0;
@@ -446,6 +443,8 @@ async function buildPayrollForMonth() {
 
             // Dựng các dòng chi tiết cho từng lớp
             employeeEntries.forEach((entry, index) => {
+                // **THAY ĐỔI QUAN TRỌNG**: Ưu tiên rate của entry, sau đó mới đến rate của payroll, cuối cùng là rate của employee
+                const rate = entry.rate || existingPayroll.rate || employee.rate || 0;
                 const hours = entry.totalHours || 0;
                 const gross = hours * rate;
                 totalHoursForEmployee += hours;
@@ -453,12 +452,16 @@ async function buildPayrollForMonth() {
 
                 const detailRow = tbody.insertRow();
                 detailRow.className = 'payroll-detail-row';
+                // **THAY ĐỔI**: Thêm data-entry-id để xác định entry cần cập nhật
+                detailRow.dataset.entryId = entry.id; 
                 detailRow.innerHTML = `
                     <td>${index === 0 ? `${employee.nameVi} (${employee.code})` : ''}</td>
                     <td>${entry.className || 'N/A'}</td>
                     <td>${hours}</td>
-                    <td class="number">${rate.toLocaleString()}</td>
-                    <td class="number">${gross.toLocaleString()}</td>
+                    
+                    <td><input type="number" class="pr-rate-detail" value="${rate}"></td>
+
+                    <td class="number gross-detail">${gross.toLocaleString()}</td>
                     <td colspan="7"></td>
                 `;
             });
@@ -476,7 +479,7 @@ async function buildPayrollForMonth() {
                 <td><strong>Tổng cộng</strong></td>
                 <td><strong>${totalHoursForEmployee}</strong></td>
                 <td></td>
-                <td><strong>${totalGrossForEmployee.toLocaleString()}</strong></td>
+                <td class="number"><strong>${totalGrossForEmployee.toLocaleString()}</strong></td>
                 <td><input type="number" class="pr-bhxh" value="${bhxh}"></td>
                 <td><input type="number" class="pr-pitax" value="${pitax}"></td>
                 <td><input type="number" class="pr-deductions" value="${deductions}"></td>
@@ -498,13 +501,87 @@ async function buildPayrollForMonth() {
     }
 }
 
+// function handlePayrollActions() {
+//     const tbody = $("#tbl-pr tbody");
+//     if (!tbody) return;
+
+//     tbody.addEventListener("click", async (e) => {
+//         const target = e.target;
+//         const row = target.closest(".payroll-summary-row"); // Chỉ lắng nghe trên dòng tổng kết
+//         if (!row) return;
+        
+//         const employeeId = row.dataset.employeeId;
+//         const month = row.dataset.month;
+
+//         if (target.classList.contains("btn-pr-save")) {
+//             const btnSave = target;
+//             if (!employeeId || !month) return alert("Lỗi: Không tìm thấy ID nhân viên hoặc tháng.");
+//             btnSave.textContent = "Đang lưu...";
+//             btnSave.disabled = true;
+//             try {
+//                 // Lấy rate từ dữ liệu nhân viên hoặc từ một input nếu bạn có (hiện tại không có input rate trên dòng tổng kết)
+//                 const employee = appData.employees.find(e => e.id === employeeId);
+//                 const rate = employee?.rate || 0; // Giả sử rate đã được định nghĩa ở employee
+
+//                 const bhxh = parseFloat(row.querySelector(".pr-bhxh").value) || 0;
+//                 const pitax = parseFloat(row.querySelector(".pr-pitax").value) || 0;
+//                 const deductions = parseFloat(row.querySelector(".pr-deductions").value) || 0;
+//                 const advance = parseFloat(row.querySelector(".pr-advance").value) || 0;
+
+//                 const batch = dbFs.batch();
+                
+//                 // Cập nhật payroll
+//                 const payrollId = `${month}_${employeeId}`;
+//                 const payrollRef = dbFs.collection("payrolls").doc(payrollId);
+//                 const payrollData = { id: payrollId, month, employeeId, rate, bhxh, pitax, deductions, advance };
+//                 batch.set(payrollRef, payrollData, { merge: true });
+//                 await batch.commit();
+
+//                 // Cập nhật appData local
+//                 const payrollIndex = appData.payrolls.findIndex(p => p.id === payrollId);
+//                 if(payrollIndex > -1) appData.payrolls[payrollIndex] = { ...appData.payrolls[payrollIndex], ...payrollData }; 
+//                 else appData.payrolls.push(payrollData);
+                
+//                 alert(`Đã cập nhật thành công.`);
+                
+//                 // Tính toán lại Net và Còn lại trên UI
+//                 const totalGrossText = row.children[4].textContent.replace(/,/g, '');
+//                 const totalGross = parseFloat(totalGrossText) || 0;
+//                 const net = totalGross - bhxh - pitax - deductions;
+//                 const remaining = net - advance;
+
+//                 row.children[8].innerHTML = `<td class="number"><strong>${net.toLocaleString()}</strong></td>`;
+//                 row.children[10].innerHTML = `<td class="number"><strong>${remaining.toLocaleString()}</strong></td>`;
+
+//             } catch (error) {
+//                 console.error("Lỗi khi lưu dữ liệu payroll:", error);
+//                 alert("Đã có lỗi xảy ra khi lưu.");
+//             } finally {
+//                 btnSave.textContent = "Lưu";
+//                 btnSave.disabled = false;
+//             }
+//         }
+
+//         if (target.classList.contains("btn-pr-slip")) {
+//             // Nút "Phiếu lương" sẽ in ra phiếu lương
+//             generateAndPrintPayslip(employeeId, month, 'print');
+//         }
+
+//         // Đã thêm nút này trực tiếp vào HTML của phiếu lương, nên không cần xử lý ở đây nữa
+//         // nếu bạn muốn nút riêng ở bảng chính thì thêm vào đây
+//         // if (target.classList.contains("btn-pr-send-email")) {
+//         //     sendPayslipEmail(employeeId, month);
+//         // }
+//     });
+// }
+// Thay thế TOÀN BỘ hàm cũ bằng hàm này
 function handlePayrollActions() {
     const tbody = $("#tbl-pr tbody");
     if (!tbody) return;
 
     tbody.addEventListener("click", async (e) => {
         const target = e.target;
-        const row = target.closest(".payroll-summary-row"); // Chỉ lắng nghe trên dòng tổng kết
+        const row = target.closest(".payroll-summary-row");
         if (!row) return;
         
         const employeeId = row.dataset.employeeId;
@@ -513,42 +590,72 @@ function handlePayrollActions() {
         if (target.classList.contains("btn-pr-save")) {
             const btnSave = target;
             if (!employeeId || !month) return alert("Lỗi: Không tìm thấy ID nhân viên hoặc tháng.");
+            
             btnSave.textContent = "Đang lưu...";
             btnSave.disabled = true;
-            try {
-                // Lấy rate từ dữ liệu nhân viên hoặc từ một input nếu bạn có (hiện tại không có input rate trên dòng tổng kết)
-                const employee = appData.employees.find(e => e.id === employeeId);
-                const rate = employee?.rate || 0; // Giả sử rate đã được định nghĩa ở employee
 
+            try {
+                const batch = dbFs.batch();
+
+                // **LOGIC MỚI**: Tìm tất cả các dòng chi tiết của nhân viên này
+                let currentTotalGross = 0;
+                let detailRow = row.previousElementSibling;
+                while (detailRow && detailRow.classList.contains('payroll-detail-row')) {
+                    const entryId = detailRow.dataset.entryId;
+                    const newRate = parseFloat(detailRow.querySelector('.pr-rate-detail').value) || 0;
+                    const hoursText = detailRow.children[2].textContent;
+                    const hours = parseFloat(hoursText) || 0;
+                    
+                    // Tính lại gross cho dòng chi tiết và cộng vào tổng
+                    const newGross = newRate * hours;
+                    currentTotalGross += newGross;
+                    
+                    // Cập nhật gross trên UI của dòng chi tiết
+                    detailRow.querySelector('.gross-detail').textContent = newGross.toLocaleString();
+
+                    // Chuẩn bị cập nhật rate cho entryMonthly trong DB
+                    if (entryId) {
+                        const entryRef = dbFs.collection("entryMonthly").doc(entryId);
+                        batch.update(entryRef, { rate: newRate });
+
+                        // Cập nhật local appData
+                        const localEntry = appData.entryMonthly.find(en => en.id === entryId);
+                        if(localEntry) localEntry.rate = newRate;
+                    }
+                    
+                    detailRow = detailRow.previousElementSibling;
+                }
+                
+                // Lấy các giá trị từ dòng tổng kết
                 const bhxh = parseFloat(row.querySelector(".pr-bhxh").value) || 0;
                 const pitax = parseFloat(row.querySelector(".pr-pitax").value) || 0;
                 const deductions = parseFloat(row.querySelector(".pr-deductions").value) || 0;
                 const advance = parseFloat(row.querySelector(".pr-advance").value) || 0;
 
-                const batch = dbFs.batch();
-                
-                // Cập nhật payroll
+                // Cập nhật payroll với các giá trị tổng hợp
                 const payrollId = `${month}_${employeeId}`;
                 const payrollRef = dbFs.collection("payrolls").doc(payrollId);
-                const payrollData = { id: payrollId, month, employeeId, rate, bhxh, pitax, deductions, advance };
+                // Lưu ý: không còn lưu 'rate' chung vào payroll nữa vì rate đã được lưu chi tiết
+                const payrollData = { id: payrollId, month, employeeId, bhxh, pitax, deductions, advance };
                 batch.set(payrollRef, payrollData, { merge: true });
+
+                // Commit tất cả thay đổi (cả entry và payroll) vào DB
                 await batch.commit();
 
-                // Cập nhật appData local
+                // Cập nhật appData local cho payroll
                 const payrollIndex = appData.payrolls.findIndex(p => p.id === payrollId);
                 if(payrollIndex > -1) appData.payrolls[payrollIndex] = { ...appData.payrolls[payrollIndex], ...payrollData }; 
                 else appData.payrolls.push(payrollData);
                 
                 alert(`Đã cập nhật thành công.`);
                 
-                // Tính toán lại Net và Còn lại trên UI
-                const totalGrossText = row.children[4].textContent.replace(/,/g, '');
-                const totalGross = parseFloat(totalGrossText) || 0;
-                const net = totalGross - bhxh - pitax - deductions;
+                // **CẬP NHẬT UI**: Tính toán lại Net và Còn lại với Gross mới
+                row.children[4].innerHTML = `<strong>${currentTotalGross.toLocaleString()}</strong>`;
+                const net = currentTotalGross - bhxh - pitax - deductions;
                 const remaining = net - advance;
 
-                row.children[8].innerHTML = `<td class="number"><strong>${net.toLocaleString()}</strong></td>`;
-                row.children[10].innerHTML = `<td class="number"><strong>${remaining.toLocaleString()}</strong></td>`;
+                row.children[8].innerHTML = `<strong>${net.toLocaleString()}</strong>`;
+                row.children[10].innerHTML = `<strong>${remaining.toLocaleString()}</strong>`;
 
             } catch (error) {
                 console.error("Lỗi khi lưu dữ liệu payroll:", error);
@@ -560,23 +667,17 @@ function handlePayrollActions() {
         }
 
         if (target.classList.contains("btn-pr-slip")) {
-            // Nút "Phiếu lương" sẽ in ra phiếu lương
-            generateAndPrintPayslip(employeeId, month, 'print');
+            generateAndPrintPayslip(employeeId, month);
         }
-
-        // Đã thêm nút này trực tiếp vào HTML của phiếu lương, nên không cần xử lý ở đây nữa
-        // nếu bạn muốn nút riêng ở bảng chính thì thêm vào đây
-        // if (target.classList.contains("btn-pr-send-email")) {
-        //     sendPayslipEmail(employeeId, month);
-        // }
     });
 }
 
+// File: script.js
+// THAY THẾ TOÀN BỘ HÀM CŨ BẰNG PHIÊN BẢN MỚI NÀY
 
 function createPayslipHtml(employee, payrollEntries, payroll, month) {
     const [year, monthNum] = month.split('-');
     
-    const rate = payroll.rate || employee.rate || 0;
     const bhxh = payroll.bhxh || 0;
     const pitax = payroll.pitax || 0;
     const deductions = payroll.deductions || 0;
@@ -584,7 +685,9 @@ function createPayslipHtml(employee, payrollEntries, payroll, month) {
 
     let totalGross = 0;
     const detailRowsHtml = payrollEntries.map((entry, index) => {
-        const subtotal = (entry.totalHours || 0) * rate;
+        // SỬA ĐỔI QUAN TRỌNG: Lấy đơn giá (rate) từ chính entry của lớp đó
+        const entryRate = entry.rate || payroll.rate || employee.rate || 0;
+        const subtotal = (entry.totalHours || 0) * entryRate;
         totalGross += subtotal;
         return `
             <tr>
@@ -592,7 +695,7 @@ function createPayslipHtml(employee, payrollEntries, payroll, month) {
                 <td>${entry.className}</td>
                 <td class="number">${entry.totalSessions || 0}</td>
                 <td class="number">${entry.totalHours || 0}</td>
-                <td class="number">${rate.toLocaleString()}</td>
+                <td class="number">${entryRate.toLocaleString()}</td>
                 <td class="number">${subtotal.toLocaleString()}</td>
             </tr>
         `;
@@ -605,7 +708,6 @@ function createPayslipHtml(employee, payrollEntries, payroll, month) {
     const amountInWordsVI = numberToVietnameseWords(finalTakeHome);
     const amountInWordsEN = numberToEnglishWords(finalTakeHome);
 
-    // Thêm id="payslip-print-area" để CSS in ấn hoạt động chính xác
     return `
     <div class="payslip-container" id="payslip-print-area">
         <div class="payslip-header">
@@ -882,27 +984,28 @@ async function sendPayslipEmail(employeeId, month) {
 // DÁN THÊM HÀM MỚI NÀY VÀO CUỐI FILE script.js
 // THAY THẾ TOÀN BỘ HÀM CŨ BẰNG PHIÊN BẢN MỚI NÀY TRONG file script.js
 // Hàm này tạo ra HTML cho email với giao diện giống hệt bản in PDF
-function createPayslipHtmlForEmail(employee, payrollEntries, payroll, month) {
+function createPayslipHtml(employee, payrollEntries, payroll, month) {
     const [year, monthNum] = month.split('-');
     
-    // Tính toán các giá trị
-    const rate = payroll.rate || employee.rate || 0;
     const bhxh = payroll.bhxh || 0;
     const pitax = payroll.pitax || 0;
     const deductions = payroll.deductions || 0;
     const advance = payroll.advance || 0;
-    let totalGross = 0;
 
+    let totalGross = 0;
     const detailRowsHtml = payrollEntries.map((entry, index) => {
-        const subtotal = (entry.totalHours || 0) * rate;
+        // SỬA ĐỔI: Lấy đơn giá (rate) từ chính entry của lớp đó, có dự phòng
+        const entryRate = entry.rate || payroll.rate || employee.rate || 0;
+        const subtotal = (entry.totalHours || 0) * entryRate;
         totalGross += subtotal;
         return `
             <tr>
-                <td style="border: 1px solid #e0e0e0; padding: 12px 15px;">${index + 1}</td>
-                <td style="border: 1px solid #e0e0e0; padding: 12px 15px;">${entry.className}</td>
-                <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;">${entry.totalHours || 0}</td>
-                <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;">${rate.toLocaleString()}</td>
-                <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;">${subtotal.toLocaleString()}</td>
+                <td>${index + 1}</td>
+                <td>${entry.className}</td>
+                <td class="number">${entry.totalSessions || 0}</td>
+                <td class="number">${entry.totalHours || 0}</td>
+                <td class="number">${entryRate.toLocaleString()}</td>
+                <td class="number">${subtotal.toLocaleString()}</td>
             </tr>
         `;
     }).join('');
@@ -910,138 +1013,106 @@ function createPayslipHtmlForEmail(employee, payrollEntries, payroll, month) {
     const totalDeductions = bhxh + pitax + deductions;
     const netSalary = totalGross - totalDeductions;
     const finalTakeHome = netSalary - advance;
+    
     const amountInWordsVI = numberToVietnameseWords(finalTakeHome);
     const amountInWordsEN = numberToEnglishWords(finalTakeHome);
 
-    // Đây là toàn bộ mã HTML của email, được tái tạo theo layout bản in
+    // Thêm id="payslip-print-area" để CSS in ấn hoạt động chính xác
     return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <style>
-            body { margin: 0; padding: 0; background-color: #f4f7fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-            .container { max-width: 850px; margin: 20px auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; }
-            .content { padding: 30px 40px; color: #333; line-height: 1.6; }
-        </style>
-    </head>
-    <body>
-        <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f4f7fa;">
-            <tr>
-                <td align="center">
-                    <table class="container" width="850" border="0" cellpadding="0" cellspacing="0" style="max-width: 850px; margin: 20px auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px;">
-                        <tr>
-                            <td class="content" style="padding: 30px 40px; color: #333; line-height: 1.6;">
-                                
-                                <table width="100%" border="0" cellpadding="0" cellspacing="0" style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #007bff; padding-bottom: 20px;">
-                                    <tr>
-                                        <td>
-                                            <h1 style="color: #007bff; margin: 0; font-size: 28px; font-weight: 600;">PHIẾU LƯƠNG / PAYSLIP</h1>
-                                            <p style="margin: 5px 0 0; font-size: 16px; color: #555;">Tháng / Month ${monthNum}/${year}</p>
-                                        </td>
-                                    </tr>
-                                </table>
+    <div class="payslip-container" id="payslip-print-area">
+        <div class="payslip-header">
+            <h1>PHIẾU LƯƠNG / PAYSLIP</h1>
+            <p>Tháng / Month ${monthNum}/${year}</p>
+        </div>
 
-                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">THÔNG TIN NHÂN VIÊN / EMPLOYEE INFORMATION</p>
-                                <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
-                                    <tr>
-                                        <td width="50%" valign="top">
-                                            <p style="margin: 0;"><strong>Họ và tên / Full Name:</strong> ${employee.nameVi || ''}</p>
-                                            <p style="margin: 5px 0 0;"><strong>Số tài khoản / Bank Account:</strong> ${employee.bankAcc || ''}</p>
-                                        </td>
-                                        <td width="50%" valign="top">
-                                            <p style="margin: 0;"><strong>Mã nhân viên / Employee ID:</strong> ${employee.code || ''}</p>
-                                            <p style="margin: 5px 0 0;"><strong>Ngân hàng / Bank Name:</strong> ${employee.bankName || ''}</p>
-                                        </td>
-                                    </tr>
-                                </table>
+        <div class="section-title">THÔNG TIN NHÂN VIÊN / EMPLOYEE INFORMATION</div>
+        <div class="info-grid">
+            <p><strong>Họ và tên / Full Name:</strong> ${employee.nameVi || ''}</p>
+            <p><strong>Mã nhân viên / Employee ID:</strong> ${employee.code || ''}</p>
+            <p><strong>Số tài khoản / Bank Account:</strong> ${employee.bankAcc || ''}</p>
+            <p><strong>Ngân hàng / Bank Name:</strong> ${employee.bankName || ''}</p>
+        </div>
 
-                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">CHI TIẾT THU NHẬP / EARNINGS DETAILS</p>
-                                <table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
-                                    <thead style="background-color: #f2f7fc; font-weight: 600; color: #333;">
-                                        <tr>
-                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: left;">STT</th>
-                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: left;">Lớp/Nội dung</th>
-                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: right;">Số giờ</th>
-                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: right;">Đơn giá/giờ</th>
-                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: right;">Thành tiền (VND)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>${detailRowsHtml}</tbody>
-                                    <tfoot style="font-weight: 600; background-color: #eaf3ff; border-top: 2px solid #007bff;">
-                                        <tr>
-                                            <td colspan="4" style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;"><strong>Tổng thu nhập / Gross Earnings:</strong></td>
-                                            <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;"><strong>${totalGross.toLocaleString()}</strong></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-
-                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">TÓM TẮT LƯƠNG / SALARY SUMMARY</p>
-                                <table width="100%" border="0" cellpadding="0" cellspacing="0" style="padding: 15px 0; border-top: 1px dashed #ccc; border-bottom: 1px dashed #ccc; margin-bottom: 25px;">
-                                     <tr>
-                                        <td style="padding: 5px 0; font-weight: 500; color: #555;">Tổng thu nhập / Gross Salary:</td>
-                                        <td style="padding: 5px 0; text-align: right;">${totalGross.toLocaleString()}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 5px 0; font-weight: 500; color: #555;">(-) BHXH / Social Insurance:</td>
-                                        <td style="padding: 5px 0; text-align: right;">${bhxh.toLocaleString()}</td>
-                                    </tr>
-                                     <tr>
-                                        <td style="padding: 5px 0; font-weight: 500; color: #555;">(-) Thuế TNCN / Personal Income Tax:</td>
-                                        <td style="padding: 5px 0; text-align: right;">${pitax.toLocaleString()}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 5px 0; font-weight: 500; color: #555;">(-) Các khoản trừ khác / Other Deductions:</td>
-                                        <td style="padding: 5px 0; text-align: right;">${deductions.toLocaleString()}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 10px 0; font-weight: 700; color: #000; font-size: 16px; border-top: 1px solid #ccc;">Lương thực nhận / Net Salary:</td>
-                                        <td style="padding: 10px 0; text-align: right; font-weight: 700; color: #000; font-size: 16px; border-top: 1px solid #ccc;">${netSalary.toLocaleString()}</td>
-                                    </tr>
-                                     <tr>
-                                        <td style="padding: 5px 0; font-weight: 500; color: #555;">(-) Tạm ứng / Advance:</td>
-                                        <td style="padding: 5px 0; text-align: right;">${advance.toLocaleString()}</td>
-                                    </tr>
-                                     <tr>
-                                        <td style="padding: 15px 0; font-weight: 700; color: #dc3545; font-size: 18px; border-top: 2px solid #ccc;">CÒN LẠI (Thực lãnh) / FINAL TAKE-HOME:</td>
-                                        <td style="padding: 15px 0; text-align: right; font-weight: 700; color: #dc3545; font-size: 18px; border-top: 2px solid #ccc;">${finalTakeHome.toLocaleString()}</td>
-                                    </tr>
-                                </table>
-                                
-                                <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-top: 25px;">
-                                    <tr>
-                                        <td style="padding: 15px; background-color: #f2f7fc; border-left: 5px solid #007bff; font-style: italic; color: #444; border-radius: 4px;">
-                                            <strong style="color: #007bff; font-weight: 600;">Bằng chữ / In words:</strong><br>
-                                            <em>(Tiếng Việt) ${amountInWordsVI}</em><br>
-                                            <em>(English) ${amountInWordsEN}</em>
-                                        </td>
-                                    </tr>
-                                </table>
-
-                                 <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-top: 50px; text-align: center;">
-                                    <tr>
-                                        <td width="33.33%" style="border-top: 1px dotted #aaa; padding-top: 10px;">
-                                            <strong style="display: block; margin-bottom: 5px; color: #333;">Người lập phiếu</strong>
-                                            <p style="margin-top: 60px; font-size: 12px; color: #777;">(Ký, họ tên)</p>
-                                        </td>
-                                         <td width="33.33%" style="border-top: 1px dotted #aaa; padding-top: 10px;">
-                                            <strong style="display: block; margin-bottom: 5px; color: #333;">Kế toán trưởng</strong>
-                                             <p style="margin-top: 60px; font-size: 12px; color: #777;">(Ký, họ tên)</p>
-                                        </td>
-                                         <td width="33.33%" style="border-top: 1px dotted #aaa; padding-top: 10px;">
-                                            <strong style="display: block; margin-bottom: 5px; color: #333;">Người nhận lương</strong>
-                                             <p style="margin-top: 60px; font-size: 12px; color: #777;">(Ký, họ tên)</p>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
+        <div class="section-title">CHI TIẾT THU NHẬP / EARNINGS DETAILS</div>
+        <table class="payslip-table">
+            <thead>
+                <tr>
+                    <th>STT / No.</th>
+                    <th>Lớp/Nội dung / Class/Content</th>
+                    <th class="number">Số buổi / Sessions</th>
+                    <th class="number">Số giờ / Hours</th>
+                    <th class="number">Đơn giá/giờ / Rate/Hour</th>
+                    <th class="number">Thành tiền (VND) / Amount (VND)</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${detailRowsHtml}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="5" style="text-align: right;"><strong>Tổng thu nhập trước thuế / Total Gross Earnings:</strong></td>
+                    <td class="number"><strong>${totalGross.toLocaleString()}</strong></td>
+                </tr>
+            </tfoot>
         </table>
-    </body>
-    </html>
+
+        <div class="section-title">TÓM TẮT LƯƠNG / SALARY SUMMARY</div>
+        <div class="summary-details">
+            <div class="summary-item">
+                <span class="label">Tổng thu nhập / Gross Salary:</span>
+                <span class="value">${totalGross.toLocaleString()}</span>
+            </div>
+            <div class="summary-item">
+                <span class="label">(-) BHXH / Social Insurance:</span>
+                <span class="value">${bhxh.toLocaleString()}</span>
+            </div>
+            <div class="summary-item">
+                <span class="label">(-) Thuế TNCN / Personal Income Tax:</span>
+                <span class="value">${pitax.toLocaleString()}</span>
+            </div>
+            <div class="summary-item">
+                <span class="label">(-) Các khoản trừ khác / Other Deductions:</span>
+                <span class="value">${deductions.toLocaleString()}</span>
+            </div>
+            <div class="summary-item total">
+                <span class="label">Lương thực nhận / Net Salary:</span>
+                <span class="value">${netSalary.toLocaleString()}</span>
+            </div>
+            <div class="summary-item">
+                <span class="label">(-) Tạm ứng / Advance:</span>
+                <span class="value">${advance.toLocaleString()}</span>
+            </div>
+            <div class="summary-item final-total">
+                <span class="label">CÒN LẠI (Thực lãnh) / FINAL TAKE-HOME:</span>
+                <span class="value">${finalTakeHome.toLocaleString()}</span>
+            </div>
+        </div>
+
+        <div class="amount-in-words">
+            <strong>Bằng chữ / In words:</strong><br>
+            <em>(Tiếng Việt) ${amountInWordsVI}</em><br>
+            <em>(English) ${amountInWordsEN}</em>
+        </div>
+
+        <div class="signature-area">
+            <div class="signature-box">
+                <strong>Người lập phiếu / Prepared by</strong>
+                <p>(Ký, họ tên / Signature, Full Name)</p>
+            </div>
+            <div class="signature-box">
+                <strong>Kế toán trưởng / Chief Accountant</strong>
+                <p>(Ký, họ tên / Signature, Full Name)</p>
+            </div>
+            <div class="signature-box">
+                <strong>Người nhận lương / Employee</strong>
+                <p>(Ký, họ tên / Signature, Full Name)</p>
+            </div>
+        </div>
+        <div id="pr-actions-container" style="text-align: center; margin-top: 30px;">
+            <button class="btn primary" onclick="window.print()">In Phiếu Lương</button>
+            <button class="btn" onclick="sendPayslipEmail('${employee.id}', '${month}')">Gửi Email Phiếu Lương</button>
+        </div>
+    </div>
     `;
 }
 
@@ -1179,4 +1250,171 @@ function numberToEnglishWords(num) {
     
     if (num < 0) return 'Minus ' + words + ' dong only';
     return words + ' dong only';
+}
+
+
+
+// File: script.js
+// THAY THẾ TOÀN BỘ HÀM CŨ BẰNG PHIÊN BẢN MỚI NÀY
+
+function createPayslipHtmlForEmail(employee, payrollEntries, payroll, month) {
+    const [year, monthNum] = month.split('-');
+    
+    const bhxh = payroll.bhxh || 0;
+    const pitax = payroll.pitax || 0;
+    const deductions = payroll.deductions || 0;
+    const advance = payroll.advance || 0;
+    let totalGross = 0;
+
+    const detailRowsHtml = payrollEntries.map((entry, index) => {
+        // SỬA ĐỔI QUAN TRỌNG: Lấy đơn giá (rate) từ chính entry của lớp đó
+        const entryRate = entry.rate || payroll.rate || employee.rate || 0;
+        const subtotal = (entry.totalHours || 0) * entryRate;
+        totalGross += subtotal;
+        return `
+            <tr>
+                <td style="border: 1px solid #e0e0e0; padding: 12px 15px;">${index + 1}</td>
+                <td style="border: 1px solid #e0e0e0; padding: 12px 15px;">${entry.className}</td>
+                <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;">${entry.totalHours || 0}</td>
+                <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;">${entryRate.toLocaleString()}</td>
+                <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;">${subtotal.toLocaleString()}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const totalDeductions = bhxh + pitax + deductions;
+    const netSalary = totalGross - totalDeductions;
+    const finalTakeHome = netSalary - advance;
+    const amountInWordsVI = numberToVietnameseWords(finalTakeHome);
+    const amountInWordsEN = numberToEnglishWords(finalTakeHome);
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body { margin: 0; padding: 0; background-color: #f4f7fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+            .container { max-width: 850px; margin: 20px auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; }
+            .content { padding: 30px 40px; color: #333; line-height: 1.6; }
+        </style>
+    </head>
+    <body>
+        <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f4f7fa;">
+            <tr>
+                <td align="center">
+                    <table class="container" width="850" border="0" cellpadding="0" cellspacing="0" style="max-width: 850px; margin: 20px auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px;">
+                        <tr>
+                            <td class="content" style="padding: 30px 40px; color: #333; line-height: 1.6;">
+                                
+                                <table width="100%" border="0" cellpadding="0" cellspacing="0" style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #007bff; padding-bottom: 20px;">
+                                    <tr>
+                                        <td>
+                                            <h1 style="color: #007bff; margin: 0; font-size: 28px; font-weight: 600;">PHIẾU LƯƠNG / PAYSLIP</h1>
+                                            <p style="margin: 5px 0 0; font-size: 16px; color: #555;">Tháng / Month ${monthNum}/${year}</p>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">THÔNG TIN NHÂN VIÊN / EMPLOYEE INFORMATION</p>
+                                <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
+                                    <tr>
+                                        <td width="50%" valign="top">
+                                            <p style="margin: 0;"><strong>Họ và tên / Full Name:</strong> ${employee.nameVi || ''}</p>
+                                            <p style="margin: 5px 0 0;"><strong>Số tài khoản / Bank Account:</strong> ${employee.bankAcc || ''}</p>
+                                        </td>
+                                        <td width="50%" valign="top">
+                                            <p style="margin: 0;"><strong>Mã nhân viên / Employee ID:</strong> ${employee.code || ''}</p>
+                                            <p style="margin: 5px 0 0;"><strong>Ngân hàng / Bank Name:</strong> ${employee.bankName || ''}</p>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">CHI TIẾT THU NHẬP / EARNINGS DETAILS</p>
+                                <table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
+                                    <thead style="background-color: #f2f7fc; font-weight: 600; color: #333;">
+                                        <tr>
+                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: left;">STT</th>
+                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: left;">Lớp/Nội dung</th>
+                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: right;">Số giờ</th>
+                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: right;">Đơn giá/giờ</th>
+                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: right;">Thành tiền (VND)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${detailRowsHtml}</tbody>
+                                    <tfoot style="font-weight: 600; background-color: #eaf3ff; border-top: 2px solid #007bff;">
+                                        <tr>
+                                            <td colspan="4" style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;"><strong>Tổng thu nhập / Gross Earnings:</strong></td>
+                                            <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;"><strong>${totalGross.toLocaleString()}</strong></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+
+                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">TÓM TẮT LƯƠNG / SALARY SUMMARY</p>
+                                <table width="100%" border="0" cellpadding="0" cellspacing="0" style="padding: 15px 0; border-top: 1px dashed #ccc; border-bottom: 1px dashed #ccc; margin-bottom: 25px;">
+                                     <tr>
+                                        <td style="padding: 5px 0; font-weight: 500; color: #555;">Tổng thu nhập / Gross Salary:</td>
+                                        <td style="padding: 5px 0; text-align: right;">${totalGross.toLocaleString()}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 5px 0; font-weight: 500; color: #555;">(-) BHXH / Social Insurance:</td>
+                                        <td style="padding: 5px 0; text-align: right;">${bhxh.toLocaleString()}</td>
+                                    </tr>
+                                     <tr>
+                                        <td style="padding: 5px 0; font-weight: 500; color: #555;">(-) Thuế TNCN / Personal Income Tax:</td>
+                                        <td style="padding: 5px 0; text-align: right;">${pitax.toLocaleString()}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 5px 0; font-weight: 500; color: #555;">(-) Các khoản trừ khác / Other Deductions:</td>
+                                        <td style="padding: 5px 0; text-align: right;">${deductions.toLocaleString()}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 10px 0; font-weight: 700; color: #000; font-size: 16px; border-top: 1px solid #ccc;">Lương thực nhận / Net Salary:</td>
+                                        <td style="padding: 10px 0; text-align: right; font-weight: 700; color: #000; font-size: 16px; border-top: 1px solid #ccc;">${netSalary.toLocaleString()}</td>
+                                    </tr>
+                                     <tr>
+                                        <td style="padding: 5px 0; font-weight: 500; color: #555;">(-) Tạm ứng / Advance:</td>
+                                        <td style="padding: 5px 0; text-align: right;">${advance.toLocaleString()}</td>
+                                    </tr>
+                                     <tr>
+                                        <td style="padding: 15px 0; font-weight: 700; color: #dc3545; font-size: 18px; border-top: 2px solid #ccc;">CÒN LẠI (Thực lãnh) / FINAL TAKE-HOME:</td>
+                                        <td style="padding: 15px 0; text-align: right; font-weight: 700; color: #dc3545; font-size: 18px; border-top: 2px solid #ccc;">${finalTakeHome.toLocaleString()}</td>
+                                    </tr>
+                                </table>
+                                
+                                <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-top: 25px;">
+                                    <tr>
+                                        <td style="padding: 15px; background-color: #f2f7fc; border-left: 5px solid #007bff; font-style: italic; color: #444; border-radius: 4px;">
+                                            <strong style="color: #007bff; font-weight: 600;">Bằng chữ / In words:</strong><br>
+                                            <em>(Tiếng Việt) ${amountInWordsVI}</em><br>
+                                            <em>(English) ${amountInWordsEN}</em>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                 <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-top: 50px; text-align: center;">
+                                    <tr>
+                                        <td width="33.33%" style="border-top: 1px dotted #aaa; padding-top: 10px;">
+                                            <strong style="display: block; margin-bottom: 5px; color: #333;">Người lập phiếu</strong>
+                                            <p style="margin-top: 60px; font-size: 12px; color: #777;">(Ký, họ tên)</p>
+                                        </td>
+                                         <td width="33.33%" style="border-top: 1px dotted #aaa; padding-top: 10px;">
+                                            <strong style="display: block; margin-bottom: 5px; color: #333;">Kế toán trưởng</strong>
+                                             <p style="margin-top: 60px; font-size: 12px; color: #777;">(Ký, họ tên)</p>
+                                        </td>
+                                         <td width="33.33%" style="border-top: 1px dotted #aaa; padding-top: 10px;">
+                                            <strong style="display: block; margin-bottom: 5px; color: #333;">Người nhận lương</strong>
+                                             <p style="margin-top: 60px; font-size: 12px; color: #777;">(Ký, họ tên)</p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    `;
 }

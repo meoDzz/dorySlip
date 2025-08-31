@@ -307,7 +307,11 @@ input:focus {
         display: none !important;
     }
 }
-
+/* Thêm vào cuối file style.css */
+.table .pr-rate-detail {
+    width: 100px; /* Giới hạn chiều rộng của ô nhập rate */
+    text-align: right;
+}
 
 
 
