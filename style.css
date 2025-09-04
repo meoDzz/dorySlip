@@ -601,3 +601,15 @@ input:focus {
         overflow-y: visible;
     }
 }
+
+.payslip-notes {
+    margin-top: -10px;
+    margin-bottom: 25px;
+    padding: 15px;
+    background-color: #fffbe6; /* Nền màu vàng nhạt */
+    border: 1px dashed #ffe58f;
+    border-radius: 4px;
+    white-space: pre-wrap; /* Giữ lại các lần xuống dòng */
+    line-height: 1.5;
+    color: #594300;
+}
