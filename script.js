@@ -918,21 +918,6 @@ function createPayslipHtml(employee, payrollEntries, payroll, month) {
             <em>(Tiếng Việt) ${amountInWordsVI}</em><br>
             <em>(English) ${amountInWordsEN}</em>
         </div>
-
-        // <div class="signature-area">
-        //     <div class="signature-box">
-        //         <strong>Người lập phiếu / Prepared by</strong>
-        //         <p>(Ký, họ tên / Signature, Full Name)</p>
-        //     </div>
-        //     <div class="signature-box">
-        //         <strong>Kế toán trưởng / Chief Accountant</strong>
-        //         <p>(Ký, họ tên / Signature, Full Name)</p>
-        //     </div>
-        //     <div class="signature-box">
-        //         <strong>Người nhận lương / Employee</strong>
-        //         <p>(Ký, họ tên / Signature, Full Name)</p>
-        //     </div>
-        // </div>
         <div id="pr-actions-container" style="text-align: center; margin-top: 30px;">
             <button class="btn primary" onclick="window.print()">In Phiếu Lương</button>
             <button class="btn" onclick="sendPayslipEmail('${employee.id}', '${month}')">Gửi Email Phiếu Lương</button>
@@ -1356,13 +1341,7 @@ function createPayslipHtmlForEmail(employee, payrollEntries, payroll, month) {
                                         <strong>Bằng chữ:</strong><br><em>(Tiếng Việt) ${amountInWordsVI}</em><br><em>(English) ${amountInWordsEN}</em>
                                     </td></tr>
                                 </table>
-                                //  <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-top: 50px; text-align: center;">
-                                //     <tr>
-                                //         <td width="33.33%" style="border-top: 1px dotted #aaa; padding-top: 10px;"><strong>Người lập phiếu</strong><p style="margin-top: 60px; font-size: 12px; color: #777;">(Ký, họ tên)</p></td>
-                                //         <td width="33.33%" style="border-top: 1px dotted #aaa; padding-top: 10px;"><strong>Kế toán trưởng</strong><p style="margin-top: 60px; font-size: 12px; color: #777;">(Ký, họ tên)</p></td>
-                                //         <td width="33.33%" style="border-top: 1px dotted #aaa; padding-top: 10px;"><strong>Người nhận lương</strong><p style="margin-top: 60px; font-size: 12px; color: #777;">(Ký, họ tên)</p></td>
-                                //     </tr>
-                                // </table>
+                                
                             </td>
                         </tr>
                     </table>
