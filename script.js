@@ -67,8 +67,8 @@ function getSession() {
 let appData = {
   users: [
     { username: "nhaplieu", password: "123456", role: "nhap_lieu" },
-    { username: "ketoan",   password: "123456", role: "ke_toan"   },
-    { username: "admin",    password: "123456", role: "admin"     }
+    { username: "ketoan",   password: "Suzy1710", role: "ke_toan"   },
+    { username: "admin",    password: "Suzy1710", role: "admin"     }
   ],
   employees: [],
   entryMonthly: [],
@@ -592,6 +592,7 @@ async function buildPayrollForMonth() {
                 </td>
             `;
         }
+        updatePayrollGrandTotal();
     } catch (error) {
         console.error("Lỗi khi tổng hợp lương:", error);
         alert("Đã xảy ra lỗi trong quá trình tổng hợp lương.");
@@ -600,6 +601,32 @@ async function buildPayrollForMonth() {
         btn.disabled = false;
     }
 }
+
+
+
+// Hàm cập nhật tổng lương còn lại cho tất cả nhân viên
+function updatePayrollGrandTotal() {
+    let grandTotal = 0;
+    const summaryRows = $$("#tbl-pr .payroll-summary-row");
+
+    summaryRows.forEach(row => {
+        // Cột "Còn lại" là cột thứ 13 (chỉ số 12) sau khi thêm cột "Ghi chú"
+        const remainingCell = row.children[12]; 
+        if (remainingCell) {
+            // Xóa các ký tự không phải số (như dấu phẩy) để chuyển đổi
+            const remainingValue = parseFloat(remainingCell.textContent.replace(/,/g, '')) || 0;
+            grandTotal += remainingValue;
+        }
+    });
+
+    // Cập nhật giá trị vào card đã tạo trong HTML
+    const grandTotalEl = $("#pr-grand-total");
+    if (grandTotalEl) {
+        grandTotalEl.textContent = grandTotal.toLocaleString();
+    }
+}
+
+
 
 // function handlePayrollActions() {
 //     const tbody = $("#tbl-pr tbody");
@@ -623,7 +650,6 @@ async function buildPayrollForMonth() {
 //             try {
 //                 const batch = dbFs.batch();
 
-//                 // **LOGIC MỚI**: Tìm tất cả các dòng chi tiết của nhân viên này
 //                 let currentTotalGross = 0;
 //                 let detailRow = row.previousElementSibling;
 //                 while (detailRow && detailRow.classList.contains('payroll-detail-row')) {
@@ -632,19 +658,15 @@ async function buildPayrollForMonth() {
 //                     const hoursText = detailRow.children[2].textContent;
 //                     const hours = parseFloat(hoursText) || 0;
                     
-//                     // Tính lại gross cho dòng chi tiết và cộng vào tổng
 //                     const newGross = newRate * hours;
 //                     currentTotalGross += newGross;
                     
-//                     // Cập nhật gross trên UI của dòng chi tiết
 //                     detailRow.querySelector('.gross-detail').textContent = newGross.toLocaleString();
 
-//                     // Chuẩn bị cập nhật rate cho entryMonthly trong DB
 //                     if (entryId) {
 //                         const entryRef = dbFs.collection("entryMonthly").doc(entryId);
 //                         batch.update(entryRef, { rate: newRate });
 
-//                         // Cập nhật local appData
 //                         const localEntry = appData.entryMonthly.find(en => en.id === entryId);
 //                         if(localEntry) localEntry.rate = newRate;
 //                     }
@@ -652,8 +674,9 @@ async function buildPayrollForMonth() {
 //                     detailRow = detailRow.previousElementSibling;
 //                 }
                 
-//                 // Lấy các giá trị từ dòng tổng kết
+//                 // Lấy các giá trị từ dòng tổng kết, bao gồm cả Ghi chú
 //                 const bonus = parseFloat(row.querySelector(".pr-bonus").value) || 0;
+//                 const notes = row.querySelector(".pr-notes").value || ''; // LẤY DỮ LIỆU GHI CHÚ
 //                 const bhxh = parseFloat(row.querySelector(".pr-bhxh").value) || 0;
 //                 const pitax = parseFloat(row.querySelector(".pr-pitax").value) || 0;
 //                 const deductions = parseFloat(row.querySelector(".pr-deductions").value) || 0;
@@ -662,10 +685,9 @@ async function buildPayrollForMonth() {
 //                 // Cập nhật payroll với các giá trị tổng hợp
 //                 const payrollId = `${month}_${employeeId}`;
 //                 const payrollRef = dbFs.collection("payrolls").doc(payrollId);
-//                 const payrollData = { id: payrollId, month, employeeId, bonus, bhxh, pitax, deductions, advance };
+//                 const payrollData = { id: payrollId, month, employeeId, bonus, notes, bhxh, pitax, deductions, advance }; // THÊM "notes" VÀO ĐÂY
 //                 batch.set(payrollRef, payrollData, { merge: true });
 
-//                 // Commit tất cả thay đổi (cả entry và payroll) vào DB
 //                 await batch.commit();
 
 //                 // Cập nhật appData local cho payroll
@@ -675,14 +697,15 @@ async function buildPayrollForMonth() {
                 
 //                 alert(`Đã cập nhật thành công.`);
                 
-//                 // **CẬP NHẬT UI**: Tính toán lại Net và Còn lại với Gross và Bonus mới
+//                 // Cập nhật UI
 //                 row.children[4].innerHTML = `<strong>${currentTotalGross.toLocaleString()}</strong>`;
 //                 const net = currentTotalGross + bonus - bhxh - pitax - deductions;
 //                 const remaining = net - advance;
 
-//                 row.children[9].innerHTML = `<strong>${net.toLocaleString()}</strong>`;
-//                 row.children[11].innerHTML = `<strong>${remaining.toLocaleString()}</strong>`;
-
+//                 // Chỉ số các cột đã thay đổi do thêm cột "Ghi chú"
+//                 row.children[10].innerHTML = `<strong>${net.toLocaleString()}</strong>`;
+//                 row.children[12].innerHTML = `<strong>${remaining.toLocaleString()}</strong>`;
+//                 updatePayrollGrandTotal();
 //             } catch (error) {
 //                 console.error("Lỗi khi lưu dữ liệu payroll:", error);
 //                 alert("Đã có lỗi xảy ra khi lưu.");
@@ -697,8 +720,13 @@ async function buildPayrollForMonth() {
 //         }
 //     });
 // }
+
+
+// Dán phiên bản ĐÚNG và DUY NHẤT này vào file script.js
+
+
 // File: script.js
-// THAY THẾ TOÀN BỘ HÀM CŨ BẰNG PHIÊN BẢN MỚI NÀY
+// THAY THẾ TOÀN BỘ HÀM CŨ BẰNG PHIÊN BẢN ĐÃ SỬA LỖI NÀY
 
 function handlePayrollActions() {
     const tbody = $("#tbl-pr tbody");
@@ -746,37 +774,37 @@ function handlePayrollActions() {
                     detailRow = detailRow.previousElementSibling;
                 }
                 
-                // Lấy các giá trị từ dòng tổng kết, bao gồm cả Ghi chú
                 const bonus = parseFloat(row.querySelector(".pr-bonus").value) || 0;
-                const notes = row.querySelector(".pr-notes").value || ''; // LẤY DỮ LIỆU GHI CHÚ
+                const notes = row.querySelector(".pr-notes").value || '';
                 const bhxh = parseFloat(row.querySelector(".pr-bhxh").value) || 0;
                 const pitax = parseFloat(row.querySelector(".pr-pitax").value) || 0;
                 const deductions = parseFloat(row.querySelector(".pr-deductions").value) || 0;
                 const advance = parseFloat(row.querySelector(".pr-advance").value) || 0;
 
-                // Cập nhật payroll với các giá trị tổng hợp
                 const payrollId = `${month}_${employeeId}`;
                 const payrollRef = dbFs.collection("payrolls").doc(payrollId);
-                const payrollData = { id: payrollId, month, employeeId, bonus, notes, bhxh, pitax, deductions, advance }; // THÊM "notes" VÀO ĐÂY
+                const payrollData = { id: payrollId, month, employeeId, bonus, notes, bhxh, pitax, deductions, advance };
                 batch.set(payrollRef, payrollData, { merge: true });
 
                 await batch.commit();
 
-                // Cập nhật appData local cho payroll
                 const payrollIndex = appData.payrolls.findIndex(p => p.id === payrollId);
                 if(payrollIndex > -1) appData.payrolls[payrollIndex] = { ...appData.payrolls[payrollIndex], ...payrollData }; 
                 else appData.payrolls.push(payrollData);
                 
                 alert(`Đã cập nhật thành công.`);
                 
-                // Cập nhật UI
                 row.children[4].innerHTML = `<strong>${currentTotalGross.toLocaleString()}</strong>`;
                 const net = currentTotalGross + bonus - bhxh - pitax - deductions;
                 const remaining = net - advance;
 
-                // Chỉ số các cột đã thay đổi do thêm cột "Ghi chú"
                 row.children[10].innerHTML = `<strong>${net.toLocaleString()}</strong>`;
                 row.children[12].innerHTML = `<strong>${remaining.toLocaleString()}</strong>`;
+                
+                // =======================================================
+                // SỬA LỖI GÕ NHẦM Ở ĐÂY (pdate... -> update...)
+                updatePayrollGrandTotal(); 
+                // =======================================================
 
             } catch (error) {
                 console.error("Lỗi khi lưu dữ liệu payroll:", error);
@@ -792,9 +820,6 @@ function handlePayrollActions() {
         }
     });
 }
-
-
-// Dán phiên bản ĐÚNG và DUY NHẤT này vào file script.js
 
 function createPayslipHtml(employee, payrollEntries, payroll, month) {
     const [year, monthNum] = month.split('-');
@@ -1352,3 +1377,9 @@ function createPayslipHtmlForEmail(employee, payrollEntries, payroll, month) {
     </html>
     `;
 }
+
+
+
+
+
+
