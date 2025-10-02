@@ -102,10 +102,31 @@ async function loadInitialData() {
 
 /** ============= UI RENDERING & LOGIC ============= **/
 
+// function createEntryRowHtml(data = {}) {
+//     // Nếu data có employeeId, tìm thông tin nhân viên đầy đủ
+//     const employeeInfo = data.employeeId ? appData.employees.find(e => e.id === data.employeeId) : data;
+//     const finalData = { ...employeeInfo, ...data };
+
+//     return `
+//         <td><input type="text" class="en-nameVi" placeholder="Tên tiếng Việt" value="${finalData.nameVi || ''}"></td>
+//         <td><input type="text" class="en-nameEn" placeholder="Tên tiếng Anh" value="${finalData.nameEn || ''}"></td>
+//         <td><input type="text" class="en-code" placeholder="Mã NV" value="${finalData.code || ''}"></td>
+//         <td><input type="text" class="en-bankAcc" placeholder="Số tài khoản" value="${finalData.bankAcc || ''}"></td>
+//         <td><input type="text" class="en-bankName" placeholder="Ngân hàng" value="${finalData.bankName || ''}"></td>
+//         <td><input type="email" class="en-email" placeholder="email@example.com" value="${finalData.email || ''}"></td> <td><input type="text" class="en-className" placeholder="Lớp" value="${finalData.className || ''}"></td>
+//         <td><input type="number" class="en-totalSessions" step="0.5" placeholder="Buổi" value="${finalData.totalSessions || 0}"></td>
+//         <td><input type="number" class="en-totalHours" step="0.25" placeholder="Giờ" value="${finalData.totalHours || 0}"></td>
+//         <td><button class="btn danger small btn-en-deleterow">Xóa</button></td>
+//     `;
+// }
+
 function createEntryRowHtml(data = {}) {
     // Nếu data có employeeId, tìm thông tin nhân viên đầy đủ
     const employeeInfo = data.employeeId ? appData.employees.find(e => e.id === data.employeeId) : data;
     const finalData = { ...employeeInfo, ...data };
+
+    // TÍNH TOÁN LẠI TỔNG SỐ GIỜ (nếu có dữ liệu cũ không có giờ/buổi)
+    const totalHours = finalData.totalHours || ((finalData.totalSessions || 0) * (finalData.hoursPerSession || 0));
 
     return `
         <td><input type="text" class="en-nameVi" placeholder="Tên tiếng Việt" value="${finalData.nameVi || ''}"></td>
@@ -113,12 +134,19 @@ function createEntryRowHtml(data = {}) {
         <td><input type="text" class="en-code" placeholder="Mã NV" value="${finalData.code || ''}"></td>
         <td><input type="text" class="en-bankAcc" placeholder="Số tài khoản" value="${finalData.bankAcc || ''}"></td>
         <td><input type="text" class="en-bankName" placeholder="Ngân hàng" value="${finalData.bankName || ''}"></td>
-        <td><input type="email" class="en-email" placeholder="email@example.com" value="${finalData.email || ''}"></td> <td><input type="text" class="en-className" placeholder="Lớp" value="${finalData.className || ''}"></td>
+        <td><input type="email" class="en-email" placeholder="email@example.com" value="${finalData.email || ''}"></td>
+        <td><input type="text" class="en-className" placeholder="Lớp" value="${finalData.className || ''}"></td>
         <td><input type="number" class="en-totalSessions" step="0.5" placeholder="Buổi" value="${finalData.totalSessions || 0}"></td>
-        <td><input type="number" class="en-totalHours" step="0.25" placeholder="Giờ" value="${finalData.totalHours || 0}"></td>
+        
+        <td><input type="number" class="en-hoursPerSession" step="0.25" placeholder="Giờ/buổi" value="${finalData.hoursPerSession || 1.5}"></td>
+        
+        <td><input type="number" class="en-totalHours" step="0.25" placeholder="Giờ" value="${totalHours.toFixed(2)}" readonly></td>
+        
         <td><button class="btn danger small btn-en-deleterow">Xóa</button></td>
     `;
 }
+
+
 
 function addEmptyEntryRow() {
     const tableBody = $("#tbl-entry tbody");
@@ -182,6 +210,84 @@ if (btnLogout) {
  * File: script.js
  * THAY THẾ TOÀN BỘ PHẦN XỬ LÝ SỰ KIỆN CỦA NÚT NÀY
  */
+// const btnSaveMonth = $("#btn-en-save");
+// if (btnSaveMonth) btnSaveMonth.onclick = async () => {
+//     const month = $("#en-month").value;
+//     if (!month) {
+//         alert("Vui lòng chọn tháng để lưu.");
+//         return;
+//     }
+    
+//     const rows = $$("#tbl-entry tbody tr");
+//     if (rows.length === 0) {
+//         alert("Không có dữ liệu nào để lưu.");
+//         return;
+//     }
+
+//     btnSaveMonth.textContent = "Đang lưu...";
+//     btnSaveMonth.disabled = true;
+
+//     try {
+//         const batch = dbFs.batch();
+
+//         // **QUAN TRỌNG: Xóa tất cả các entry cũ của tháng này trước khi thêm mới**
+//         const oldEntriesQuery = await dbFs.collection("entryMonthly").where("month", "==", month).get();
+//         oldEntriesQuery.forEach(doc => {
+//             batch.delete(doc.ref);
+//         });
+
+//         for (const row of rows) {
+//             const code = row.querySelector(".en-code").value.trim();
+//             if (!code) continue; // Bỏ qua các dòng trống
+
+//             let employee = appData.employees.find(e => e.code === code);
+//             let employeeRef;
+
+//             if (employee) {
+//                 employeeRef = dbFs.collection("employees").doc(employee.id);
+//             } else {
+//                 employeeRef = dbFs.collection("employees").doc();
+//                 employee = { id: employeeRef.id, code: code };
+//             }
+            
+//             // Cập nhật thông tin nhân viên
+//             const employeeData = {
+//                 code: code,
+//                 nameVi: row.querySelector(".en-nameVi").value.trim(),
+//                 nameEn: row.querySelector(".en-nameEn").value.trim(),
+//                 bankAcc: row.querySelector(".en-bankAcc").value.trim(),
+//                 bankName: row.querySelector(".en-bankName").value.trim(),
+//                 email: row.querySelector(".en-email").value.trim(), // THÊM DÒNG NÀY ĐỂ LẤY EMAIL
+//             };
+//             batch.set(employeeRef, employeeData, { merge: true });
+
+//             // **Tạo một entry MỚI cho mỗi dòng (mỗi lớp)**
+//             const entryRef = dbFs.collection("entryMonthly").doc(); // ID tự động
+//             const entryData = {
+//                 month: month,
+//                 employeeId: employee.id,
+//                 className: row.querySelector(".en-className").value.trim() || 'Không có tên lớp',
+//                 totalSessions: parseFloat(row.querySelector(".en-totalSessions").value) || 0,
+//                 totalHours: parseFloat(row.querySelector(".en-totalHours").value) || 0,
+//             };
+//             batch.set(entryRef, entryData);
+//         }
+
+//         await batch.commit();
+
+//         alert(`Đã lưu thành công dữ liệu cho tháng ${month}!`);
+//         await loadInitialData(); // Tải lại toàn bộ dữ liệu để đồng bộ
+
+//     } catch (error) {
+//         console.error("Lỗi khi lưu dữ liệu: ", error);
+//         alert("Đã xảy ra lỗi. Vui lòng kiểm tra lại dữ liệu hoặc xem console log.");
+//     } finally {
+//         btnSaveMonth.textContent = "Lưu tháng";
+//         btnSaveMonth.disabled = false;
+//     }
+// };
+
+
 const btnSaveMonth = $("#btn-en-save");
 if (btnSaveMonth) btnSaveMonth.onclick = async () => {
     const month = $("#en-month").value;
@@ -229,7 +335,7 @@ if (btnSaveMonth) btnSaveMonth.onclick = async () => {
                 nameEn: row.querySelector(".en-nameEn").value.trim(),
                 bankAcc: row.querySelector(".en-bankAcc").value.trim(),
                 bankName: row.querySelector(".en-bankName").value.trim(),
-                email: row.querySelector(".en-email").value.trim(), // THÊM DÒNG NÀY ĐỂ LẤY EMAIL
+                email: row.querySelector(".en-email").value.trim(),
             };
             batch.set(employeeRef, employeeData, { merge: true });
 
@@ -240,6 +346,8 @@ if (btnSaveMonth) btnSaveMonth.onclick = async () => {
                 employeeId: employee.id,
                 className: row.querySelector(".en-className").value.trim() || 'Không có tên lớp',
                 totalSessions: parseFloat(row.querySelector(".en-totalSessions").value) || 0,
+                // ======================= LƯU DỮ LIỆU MỚI =======================
+                hoursPerSession: parseFloat(row.querySelector(".en-hoursPerSession").value) || 0,
                 totalHours: parseFloat(row.querySelector(".en-totalHours").value) || 0,
             };
             batch.set(entryRef, entryData);
@@ -292,6 +400,33 @@ if (btnSaveMonth) btnSaveMonth.onclick = async () => {
       });
   }
 
+// const entryTbody = $("#tbl-entry tbody");
+// if (entryTbody) {
+//     // Xóa dòng trực tiếp trên UI
+//     entryTbody.addEventListener('click', (e) => {
+//         if (e.target.classList.contains('btn-en-deleterow')) {
+//             e.target.closest('tr').remove();
+//         }
+//     });
+    
+//     // **TÍNH NĂNG MỚI: Tự động điền thông tin nhân viên khi nhập Mã NV**
+//     entryTbody.addEventListener('change', (e) => {
+//         if (e.target.classList.contains('en-code')) {
+//             const code = e.target.value.trim();
+//             const employee = appData.employees.find(emp => emp.code === code);
+//             if (employee) {
+//                 const row = e.target.closest('tr');
+//                 row.querySelector('.en-nameVi').value = employee.nameVi || '';
+//                 row.querySelector('.en-nameEn').value = employee.nameEn || '';
+//                 row.querySelector('.en-bankAcc').value = employee.bankAcc || '';
+//                 row.querySelector('.en-bankName').value = employee.bankName || '';
+//                 row.querySelector('.en-email').value = employee.email || ''; // THÊM DÒNG NÀY
+//             }
+//         }
+//     });
+// }
+
+
 const entryTbody = $("#tbl-entry tbody");
 if (entryTbody) {
     // Xóa dòng trực tiếp trên UI
@@ -301,22 +436,34 @@ if (entryTbody) {
         }
     });
     
-    // **TÍNH NĂNG MỚI: Tự động điền thông tin nhân viên khi nhập Mã NV**
-    entryTbody.addEventListener('change', (e) => {
+    // **CẬP NHẬT LOGIC: Tự động điền thông tin và TỰ ĐỘNG TÍNH TỔNG GIỜ**
+    entryTbody.addEventListener('input', (e) => {
+        const row = e.target.closest('tr');
+        if (!row) return;
+
+        // Tính năng 1: Tự động điền thông tin nhân viên khi nhập Mã NV
         if (e.target.classList.contains('en-code')) {
             const code = e.target.value.trim();
             const employee = appData.employees.find(emp => emp.code === code);
             if (employee) {
-                const row = e.target.closest('tr');
                 row.querySelector('.en-nameVi').value = employee.nameVi || '';
                 row.querySelector('.en-nameEn').value = employee.nameEn || '';
                 row.querySelector('.en-bankAcc').value = employee.bankAcc || '';
                 row.querySelector('.en-bankName').value = employee.bankName || '';
-                row.querySelector('.en-email').value = employee.email || ''; // THÊM DÒNG NÀY
+                row.querySelector('.en-email').value = employee.email || '';
             }
+        }
+        
+        // Tính năng 2: Tự động tính tổng giờ
+        if (e.target.classList.contains('en-totalSessions') || e.target.classList.contains('en-hoursPerSession')) {
+            const sessions = parseFloat(row.querySelector('.en-totalSessions').value) || 0;
+            const hoursPerSession = parseFloat(row.querySelector('.en-hoursPerSession').value) || 0;
+            const totalHours = sessions * hoursPerSession;
+            row.querySelector('.en-totalHours').value = totalHours.toFixed(2); // toFixed(2) để làm tròn đến 2 chữ số thập phân
         }
     });
 }
+
 
   /** ====== GẮN SỰ KIỆN CHO TAB KẾ TOÁN ====== **/
   const btnPrBuild = $("#btn-pr-build");
@@ -1320,45 +1467,45 @@ function createPayslipHtmlForEmail(employee, payrollEntries, payroll, month) {
                                 <table width="100%" border="0" cellpadding="0" cellspacing="0" style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #007bff; padding-bottom: 20px;">
                                     <tr><td><h1 style="color: #007bff; margin: 0; font-size: 28px; font-weight: 600;">PHIẾU LƯƠNG / PAYSLIP</h1><p style="margin: 5px 0 0; font-size: 16px; color: #555;">Tháng / Month ${monthNum}/${year}</p></td></tr>
                                 </table>
-                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">THÔNG TIN NHÂN VIÊN</p>
+                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">THÔNG TIN NHÂN VIÊN / EMPLOYEE INFORMATION</p>
                                 <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
                                     <tr>
-                                        <td width="50%" valign="top"><p style="margin: 0;"><strong>Họ và tên:</strong> ${employee.nameVi || ''}</p><p style="margin: 5px 0 0;"><strong>Số tài khoản:</strong> ${employee.bankAcc || ''}</p></td>
-                                        <td width="50%" valign="top"><p style="margin: 0;"><strong>Mã nhân viên:</strong> ${employee.code || ''}</p><p style="margin: 5px 0 0;"><strong>Ngân hàng:</strong> ${employee.bankName || ''}</p></td>
+                                        <td width="50%" valign="top"><p style="margin: 0;"><strong>Họ và tên / Full Name: </strong> ${employee.nameVi || ''}</p><p style="margin: 5px 0 0;"><strong>Số tài khoản / Bank Account:</strong> ${employee.bankAcc || ''}</p></td>
+                                        <td width="50%" valign="top"><p style="margin: 0;"><strong>Mã nhân viên / Employee ID: </strong> ${employee.code || ''}</p><p style="margin: 5px 0 0;"><strong>Ngân hàng  / Bank Name:</strong> ${employee.bankName || ''}</p></td>
                                     </tr>
                                 </table>
-                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">CHI TIẾT THU NHẬP</p>
+                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">CHI TIẾT THU NHẬP / EARNINGS DETAILS</p>
                                 <table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
                                     <thead style="background-color: #f2f7fc; font-weight: 600; color: #333;">
                                         <tr>
-                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: left;">STT</th>
-                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: left;">Lớp/Nội dung</th>
-                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: right;">Số giờ</th>
-                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: right;">Đơn giá/giờ</th>
-                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: right;">Thành tiền (VND)</th>
+                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: left;">STT / No.</th>
+                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: left;">Lớp/Nội dung / Class/Content</th>
+                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: right;">Số giờ / Hours</th>
+                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: right;">Đơn giá/giờ /Rate/Hour</th>
+                                            <th style="border: 1px solid #d0e0ed; padding: 12px 15px; text-align: right;">Thành tiền (VND) / Amount (VND)</th>
                                         </tr>
                                     </thead>
                                     <tbody>${detailRowsHtml}</tbody>
                                     <tfoot style="font-weight: 600; background-color: #eaf3ff; border-top: 2px solid #007bff;">
                                         <tr>
-                                            <td colspan="4" style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;"><strong>Tổng thu nhập:</strong></td>
+                                            <td colspan="4" style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;"><strong>Tổng thu nhập / Total Gross Earnings:</strong></td>
                                             <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;"><strong>${totalGross.toLocaleString()}</strong></td>
                                         </tr>
                                     </tfoot>
                                 </table>
-                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">TÓM TẮT LƯƠNG</p>
+                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">TÓM TẮT LƯƠNG / SALARY SUMMARY </p>
                                 <table width="100%" border="0" cellpadding="0" cellspacing="0" style="padding: 15px 0; border-top: 1px dashed #ccc; border-bottom: 1px dashed #ccc; margin-bottom: 25px;">
-                                     <tr><td style="padding: 5px 0;">Tổng thu nhập:</td><td style="padding: 5px 0; text-align: right;">${totalGross.toLocaleString()}</td></tr>
-                                     <tr><td style="padding: 5px 0;">(+) Thưởng:</td><td style="padding: 5px 0; text-align: right;">${bonus.toLocaleString()}</td></tr>
-                                     <tr><td style="padding: 5px 0;">(-) BHXH:</td><td style="padding: 5px 0; text-align: right;">${bhxh.toLocaleString()}</td></tr>
-                                     <tr><td style="padding: 5px 0;">(-) Thuế TNCN:</td><td style="padding: 5px 0; text-align: right;">${pitax.toLocaleString()}</td></tr>
-                                     <tr><td style="padding: 5px 0;">(-) Các khoản trừ khác:</td><td style="padding: 5px 0; text-align: right;">${deductions.toLocaleString()}</td></tr>
-                                     <tr><td style="padding: 10px 0; font-weight: 700; font-size: 16px; border-top: 1px solid #ccc;">Lương thực nhận:</td><td style="padding: 10px 0; text-align: right; font-weight: 700; font-size: 16px; border-top: 1px solid #ccc;">${netSalary.toLocaleString()}</td></tr>
-                                     <tr><td style="padding: 5px 0;">(-) Tạm ứng:</td><td style="padding: 5px 0; text-align: right;">${advance.toLocaleString()}</td></tr>
-                                     <tr><td style="padding: 15px 0; font-weight: 700; color: #dc3545; font-size: 18px; border-top: 2px solid #ccc;">CÒN LẠI (Thực lãnh):</td><td style="padding: 15px 0; text-align: right; font-weight: 700; color: #dc3545; font-size: 18px; border-top: 2px solid #ccc;">${finalTakeHome.toLocaleString()}</td></tr>
+                                     <tr><td style="padding: 5px 0;">Tổng thu nhập / Gross Salary:</td><td style="padding: 5px 0; text-align: right;">${totalGross.toLocaleString()}</td></tr>
+                                     <tr><td style="padding: 5px 0;">(+) Thưởng / Bonus:</td><td style="padding: 5px 0; text-align: right;">${bonus.toLocaleString()}</td></tr>
+                                     <tr><td style="padding: 5px 0;">(-) BHXH / Social Insurance:</td><td style="padding: 5px 0; text-align: right;">${bhxh.toLocaleString()}</td></tr>
+                                     <tr><td style="padding: 5px 0;">(-) Thuế TNCN / Personal Income Tax:</td><td style="padding: 5px 0; text-align: right;">${pitax.toLocaleString()}</td></tr>
+                                     <tr><td style="padding: 5px 0;">(-) Các khoản trừ khác  / Other Deductions:</td><td style="padding: 5px 0; text-align: right;">${deductions.toLocaleString()}</td></tr>
+                                     <tr><td style="padding: 10px 0; font-weight: 700; font-size: 16px; border-top: 1px solid #ccc;">Lương thực nhận / Net Salary:</td><td style="padding: 10px 0; text-align: right; font-weight: 700; font-size: 16px; border-top: 1px solid #ccc;">${netSalary.toLocaleString()}</td></tr>
+                                     <tr><td style="padding: 5px 0;">(-) Tạm ứng / Advance:</td><td style="padding: 5px 0; text-align: right;">${advance.toLocaleString()}</td></tr>
+                                     <tr><td style="padding: 15px 0; font-weight: 700; color: #dc3545; font-size: 18px; border-top: 2px solid #ccc;">CÒN LẠI (Thực lãnh) / FINAL TAKE-HOME:</td><td style="padding: 15px 0; text-align: right; font-weight: 700; color: #dc3545; font-size: 18px; border-top: 2px solid #ccc;">${finalTakeHome.toLocaleString()}</td></tr>
                                 </table>
                                 ${notes ? `
-                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">GHI CHÚ</p>
+                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">GHI CHÚ /</p>
                                 <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;"><tr><td style="padding: 15px; background-color: #fffbe6; border: 1px dashed #ffe58f; border-radius: 4px; color: #594300; white-space: pre-wrap;">${notes.replace(/\n/g, '<br>')}</td></tr></table>
                                 ` : ''}
                                 <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-top: 25px;">
