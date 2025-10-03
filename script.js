@@ -1073,7 +1073,7 @@ function createPayslipHtml(employee, payrollEntries, payroll, month) {
                 <span class="value">${advance.toLocaleString()}</span>
             </div>
             <div class="summary-item final-total">
-                <span class="label">CÒN LẠI (Thực lãnh) / FINAL TAKE-HOME:</span>
+                <span class="label">CÒN LẠI (Thực lãnh) / BALANCE:</span>
                 <span class="value">${finalTakeHome.toLocaleString()}</span>
             </div>
         </div>
@@ -1502,10 +1502,10 @@ function createPayslipHtmlForEmail(employee, payrollEntries, payroll, month) {
                                      <tr><td style="padding: 5px 0;">(-) Các khoản trừ khác  / Other Deductions:</td><td style="padding: 5px 0; text-align: right;">${deductions.toLocaleString()}</td></tr>
                                      <tr><td style="padding: 10px 0; font-weight: 700; font-size: 16px; border-top: 1px solid #ccc;">Lương thực nhận / Net Salary:</td><td style="padding: 10px 0; text-align: right; font-weight: 700; font-size: 16px; border-top: 1px solid #ccc;">${netSalary.toLocaleString()}</td></tr>
                                      <tr><td style="padding: 5px 0;">(-) Tạm ứng / Advance:</td><td style="padding: 5px 0; text-align: right;">${advance.toLocaleString()}</td></tr>
-                                     <tr><td style="padding: 15px 0; font-weight: 700; color: #dc3545; font-size: 18px; border-top: 2px solid #ccc;">CÒN LẠI (Thực lãnh) / FINAL TAKE-HOME:</td><td style="padding: 15px 0; text-align: right; font-weight: 700; color: #dc3545; font-size: 18px; border-top: 2px solid #ccc;">${finalTakeHome.toLocaleString()}</td></tr>
+                                     <tr><td style="padding: 15px 0; font-weight: 700; color: #dc3545; font-size: 18px; border-top: 2px solid #ccc;">CÒN LẠI (Thực lãnh) / BALANCE:</td><td style="padding: 15px 0; text-align: right; font-weight: 700; color: #dc3545; font-size: 18px; border-top: 2px solid #ccc;">${finalTakeHome.toLocaleString()}</td></tr>
                                 </table>
                                 ${notes ? `
-                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">GHI CHÚ /</p>
+                                <p style="font-size: 18px; font-weight: 600; color: #007bff; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px dashed #cccccc; padding-bottom: 5px;">GHI CHÚ / NOTE: </p>
                                 <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;"><tr><td style="padding: 15px; background-color: #fffbe6; border: 1px dashed #ffe58f; border-radius: 4px; color: #594300; white-space: pre-wrap;">${notes.replace(/\n/g, '<br>')}</td></tr></table>
                                 ` : ''}
                                 <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-top: 25px;">
