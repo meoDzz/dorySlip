@@ -289,6 +289,88 @@ if (btnLogout) {
 // };
 
 
+// const btnSaveMonth = $("#btn-en-save");
+// if (btnSaveMonth) btnSaveMonth.onclick = async () => {
+//     const month = $("#en-month").value;
+//     if (!month) {
+//         alert("Vui lòng chọn tháng để lưu.");
+//         return;
+//     }
+    
+//     const rows = $$("#tbl-entry tbody tr");
+//     if (rows.length === 0) {
+//         alert("Không có dữ liệu nào để lưu.");
+//         return;
+//     }
+
+//     btnSaveMonth.textContent = "Đang lưu...";
+//     btnSaveMonth.disabled = true;
+
+//     try {
+//         const batch = dbFs.batch();
+
+//         // **QUAN TRỌNG: Xóa tất cả các entry cũ của tháng này trước khi thêm mới**
+//         const oldEntriesQuery = await dbFs.collection("entryMonthly").where("month", "==", month).get();
+//         oldEntriesQuery.forEach(doc => {
+//             batch.delete(doc.ref);
+//         });
+
+//         for (const row of rows) {
+//             const code = row.querySelector(".en-code").value.trim();
+//             if (!code) continue; // Bỏ qua các dòng trống
+
+//             let employee = appData.employees.find(e => e.code === code);
+//             let employeeRef;
+
+//             if (employee) {
+//                 employeeRef = dbFs.collection("employees").doc(employee.id);
+//             } else {
+//                 employeeRef = dbFs.collection("employees").doc();
+//                 employee = { id: employeeRef.id, code: code };
+//             }
+            
+//             // Cập nhật thông tin nhân viên
+//             const employeeData = {
+//                 code: code,
+//                 nameVi: row.querySelector(".en-nameVi").value.trim(),
+//                 nameEn: row.querySelector(".en-nameEn").value.trim(),
+//                 bankAcc: row.querySelector(".en-bankAcc").value.trim(),
+//                 bankName: row.querySelector(".en-bankName").value.trim(),
+//                 email: row.querySelector(".en-email").value.trim(),
+//             };
+//             batch.set(employeeRef, employeeData, { merge: true });
+
+//             // **Tạo một entry MỚI cho mỗi dòng (mỗi lớp)**
+//             const entryRef = dbFs.collection("entryMonthly").doc(); // ID tự động
+//             const entryData = {
+//                 month: month,
+//                 employeeId: employee.id,
+//                 className: row.querySelector(".en-className").value.trim() || 'Không có tên lớp',
+//                 totalSessions: parseFloat(row.querySelector(".en-totalSessions").value) || 0,
+//                 // ======================= LƯU DỮ LIỆU MỚI =======================
+//                 hoursPerSession: parseFloat(row.querySelector(".en-hoursPerSession").value) || 0,
+//                 totalHours: parseFloat(row.querySelector(".en-totalHours").value) || 0,
+//             };
+//             batch.set(entryRef, entryData);
+//         }
+
+//         await batch.commit();
+
+//         alert(`Đã lưu thành công dữ liệu cho tháng ${month}!`);
+//         await loadInitialData(); // Tải lại toàn bộ dữ liệu để đồng bộ
+
+//     } catch (error) {
+//         console.error("Lỗi khi lưu dữ liệu: ", error);
+//         alert("Đã xảy ra lỗi. Vui lòng kiểm tra lại dữ liệu hoặc xem console log.");
+//     } finally {
+//         btnSaveMonth.textContent = "Lưu tháng";
+//         btnSaveMonth.disabled = false;
+//     }
+// };
+
+// TÌM ĐOẠN MÃ BẮT ĐẦU BẰNG "const btnSaveMonth = $("#btn-en-save");"
+// VÀ THAY THẾ TOÀN BỘ PHẦN XỬ LÝ onclick CỦA NÓ BẰNG ĐOẠN MÃ MỚI NÀY:
+
 const btnSaveMonth = $("#btn-en-save");
 if (btnSaveMonth) btnSaveMonth.onclick = async () => {
     const month = $("#en-month").value;
@@ -298,8 +380,8 @@ if (btnSaveMonth) btnSaveMonth.onclick = async () => {
     }
     
     const rows = $$("#tbl-entry tbody tr");
-    if (rows.length === 0) {
-        alert("Không có dữ liệu nào để lưu.");
+    if (rows.length === 0 && appData.entryMonthly.filter(e => e.month === month).length === 0) {
+        alert("Không có dữ liệu nào để lưu hoặc để xóa cho tháng này.");
         return;
     }
 
@@ -309,15 +391,13 @@ if (btnSaveMonth) btnSaveMonth.onclick = async () => {
     try {
         const batch = dbFs.batch();
 
-        // **QUAN TRỌNG: Xóa tất cả các entry cũ của tháng này trước khi thêm mới**
-        const oldEntriesQuery = await dbFs.collection("entryMonthly").where("month", "==", month).get();
-        oldEntriesQuery.forEach(doc => {
-            batch.delete(doc.ref);
-        });
+        // Lấy tất cả các mục đã có của tháng này để so sánh
+        const existingEntriesForMonth = appData.entryMonthly.filter(e => e.month === month);
+        const processedEntryIds = new Set();
 
         for (const row of rows) {
             const code = row.querySelector(".en-code").value.trim();
-            if (!code) continue; // Bỏ qua các dòng trống
+            if (!code) continue; // Bỏ qua các dòng trống mã NV
 
             let employee = appData.employees.find(e => e.code === code);
             let employeeRef;
@@ -329,7 +409,7 @@ if (btnSaveMonth) btnSaveMonth.onclick = async () => {
                 employee = { id: employeeRef.id, code: code };
             }
             
-            // Cập nhật thông tin nhân viên
+            // Cập nhật thông tin nhân viên (nếu có thay đổi)
             const employeeData = {
                 code: code,
                 nameVi: row.querySelector(".en-nameVi").value.trim(),
@@ -340,23 +420,53 @@ if (btnSaveMonth) btnSaveMonth.onclick = async () => {
             };
             batch.set(employeeRef, employeeData, { merge: true });
 
-            // **Tạo một entry MỚI cho mỗi dòng (mỗi lớp)**
-            const entryRef = dbFs.collection("entryMonthly").doc(); // ID tự động
-            const entryData = {
+            // Dữ liệu chấm công từ UI
+            const className = row.querySelector(".en-className").value.trim() || 'Không có tên lớp';
+            const entryDataFromUI = {
                 month: month,
                 employeeId: employee.id,
-                className: row.querySelector(".en-className").value.trim() || 'Không có tên lớp',
+                className: className,
                 totalSessions: parseFloat(row.querySelector(".en-totalSessions").value) || 0,
-                // ======================= LƯU DỮ LIỆU MỚI =======================
                 hoursPerSession: parseFloat(row.querySelector(".en-hoursPerSession").value) || 0,
                 totalHours: parseFloat(row.querySelector(".en-totalHours").value) || 0,
             };
-            batch.set(entryRef, entryData);
+
+            // **LOGIC SỬA LỖI BẮT ĐẦU TỪ ĐÂY**
+            // Tìm xem dòng này đã tồn tại trong DB chưa (dựa trên employeeId và className)
+            const existingEntry = existingEntriesForMonth.find(e => 
+                e.employeeId === employee.id && e.className === className
+            );
+
+            if (existingEntry) {
+                // Nếu đã tồn tại -> CẬP NHẬT
+                processedEntryIds.add(existingEntry.id);
+                const entryRef = dbFs.collection("entryMonthly").doc(existingEntry.id);
+                
+                // Trộn dữ liệu từ UI và GIỮ LẠI RATE CŨ
+                const finalData = {
+                    ...entryDataFromUI,
+                    rate: existingEntry.rate || 0 // Quan trọng: Giữ lại rate đã lưu
+                };
+                batch.update(entryRef, finalData);
+
+            } else {
+                // Nếu chưa tồn tại -> TẠO MỚI
+                const entryRef = dbFs.collection("entryMonthly").doc(); // ID tự động
+                batch.set(entryRef, entryDataFromUI); // Dữ liệu mới chưa có rate
+            }
         }
+
+        // Xóa những entry có trong DB nhưng không có trên UI (nghĩa là đã bị người dùng xóa)
+        existingEntriesForMonth.forEach(entry => {
+            if (!processedEntryIds.has(entry.id)) {
+                const entryToDeleteRef = dbFs.collection("entryMonthly").doc(entry.id);
+                batch.delete(entryToDeleteRef);
+            }
+        });
 
         await batch.commit();
 
-        alert(`Đã lưu thành công dữ liệu cho tháng ${month}!`);
+        alert(`Đã cập nhật thành công dữ liệu cho tháng ${month}!`);
         await loadInitialData(); // Tải lại toàn bộ dữ liệu để đồng bộ
 
     } catch (error) {
@@ -535,6 +645,56 @@ async function loadEntriesForMonth(month) {
   }
 }
 
+
+// =============================================================================
+// HÀM TÍNH TOÁN VÀ GỢI Ý THUẾ TNCN MỚI
+// =============================================================================
+function updatePayrollRowCalculations(summaryRow, shouldSuggestPIT = true) {
+    if (!summaryRow || !summaryRow.classList.contains('payroll-summary-row')) return;
+
+    // 1. Tính lại tổng Gross từ các dòng chi tiết
+    let totalGross = 0;
+    let detailRow = summaryRow.previousElementSibling;
+    while (detailRow && detailRow.classList.contains('payroll-detail-row')) {
+        const rate = parseFloat(detailRow.querySelector('.pr-rate-detail').value) || 0;
+        // Cột "Giờ" có chỉ số là 4 (sau khi thêm 2 cột mới)
+        const hours = parseFloat(detailRow.children[4].textContent) || 0;
+        const gross = rate * hours;
+        detailRow.querySelector('.gross-detail').textContent = gross.toLocaleString();
+        totalGross += gross;
+        detailRow = detailRow.previousElementSibling;
+    }
+    // Cột "Gross" trong dòng tổng kết có chỉ số là 6
+    summaryRow.children[6].querySelector('strong').textContent = totalGross.toLocaleString();
+
+    // 2. Lấy các giá trị khác từ input
+    const bonus = parseFloat(summaryRow.querySelector(".pr-bonus").value) || 0;
+    const bhxh = parseFloat(summaryRow.querySelector(".pr-bhxh").value) || 0;
+    const deductions = parseFloat(summaryRow.querySelector(".pr-deductions").value) || 0;
+    const pitInput = summaryRow.querySelector(".pr-pitax");
+
+    // 3. Tự động tính và điền thuế TNCN nếu cần
+    if (shouldSuggestPIT) {
+        const baseIncome = totalGross + bonus - bhxh - deductions;
+        // Công thức tính thuế 10% trên lương thực nhận: (Thu nhập chịu thuế) / 11
+        const suggestedPIT = (baseIncome > 0) ? Math.round(baseIncome / 11) : 0;
+        pitInput.value = suggestedPIT;
+    }
+
+    // 4. Tính toán Net và Còn lại dựa trên giá trị cuối cùng (có thể do người dùng tự sửa)
+    const pitax = parseFloat(pitInput.value) || 0;
+    const net = totalGross + bonus - bhxh - pitax - deductions;
+    const advance = parseFloat(summaryRow.querySelector(".pr-advance").value) || 0;
+    const remaining = net - advance;
+
+    // 5. Cập nhật giao diện
+    summaryRow.children[12].querySelector('strong').textContent = net.toLocaleString(); // Cột Net
+    summaryRow.children[14].querySelector('strong').textContent = remaining.toLocaleString(); // Cột Còn lại
+
+    // 6. Cập nhật tổng chi toàn bảng
+    updatePayrollGrandTotal();
+}
+
 /** ============= CÁC HÀM CHO TAB KẾ TOÁN (ĐÃ CẬP NHẬT) ============= **/
 // async function buildPayrollForMonth() {
 //     const month = $("#pr-month").value;
@@ -681,7 +841,8 @@ async function buildPayrollForMonth() {
             const employeeEntries = entriesByEmployee[employee.id];
             let totalHoursForEmployee = 0;
             let totalGrossForEmployee = 0;
-            
+            let totalSessionsForEmployee = 0; // BIẾN MỚI
+
             const payrollId = `${month}_${employee.id}`;
             const existingPayroll = appData.payrolls.find(p => p.id === payrollId) || {};
             
@@ -698,8 +859,11 @@ async function buildPayrollForMonth() {
                 const rate = entry.rate || existingPayroll.rate || employee.rate || 0;
                 const hours = entry.totalHours || 0;
                 const gross = hours * rate;
+                const sessions = entry.totalSessions || 0;
+                const hoursPerSession = entry.hoursPerSession || 0;
                 totalHoursForEmployee += hours;
                 totalGrossForEmployee += gross;
+                totalSessionsForEmployee += sessions; // TÍNH TỔNG MỚI
 
                 const detailRow = tbody.insertRow();
                 detailRow.className = 'payroll-detail-row';
@@ -707,15 +871,15 @@ async function buildPayrollForMonth() {
                 detailRow.innerHTML = `
                     <td>${index === 0 ? `${employee.nameVi} (${employee.code})` : ''}</td>
                     <td>${entry.className || 'N/A'}</td>
-                    <td>${hours}</td>
+                    <td>${sessions}</td>            <td>${hoursPerSession}</td>      <td>${hours}</td>
                     <td><input type="number" class="pr-rate-detail" value="${rate}"></td>
                     <td class="number gross-detail">${gross.toLocaleString()}</td>
                     <td colspan="9"></td> `;
             });
 
             // Dựng dòng tổng kết cho nhân viên
-            const net = totalGrossForEmployee + bonus - bhxh - pitax - deductions;
-            const remaining = net - advance;
+            // const net = totalGrossForEmployee + bonus - bhxh - pitax - deductions;
+            // const remaining = net - advance;
 
             const summaryRow = tbody.insertRow();
             summaryRow.className = 'payroll-summary-row';
@@ -724,21 +888,25 @@ async function buildPayrollForMonth() {
             summaryRow.innerHTML = `
                 <td></td>
                 <td><strong>Tổng cộng</strong></td>
+                <td><strong>${totalSessionsForEmployee}</strong></td>
+                <td></td>
                 <td><strong>${totalHoursForEmployee}</strong></td>
                 <td></td>
                 <td class="number"><strong>${totalGrossForEmployee.toLocaleString()}</strong></td>
                 <td><input type="number" class="pr-bonus" value="${bonus}"></td>
-                <td><input type="text" class="pr-notes" placeholder="Ghi chú thưởng/phạt..." value="${notes}"></td> <td><input type="number" class="pr-bhxh" value="${bhxh}"></td>
-                <td><input type="number" class="pr-pitax" value="${pitax}"></td>
+                <td><input type="text" class="pr-notes" placeholder="Ghi chú thưởng/phạt..." value="${notes}"></td> 
+                <td><input type="number" class="pr-bhxh" value="${bhxh}"></td>
+                <td><input type="number" class="pr-pitax" value="${existingPayroll.pitax || 0}"></td>
                 <td><input type="number" class="pr-deductions" value="${deductions}"></td>
-                <td class="number"><strong>${net.toLocaleString()}</strong></td>
+                <td class="number"><strong>0</strong></td>
                 <td><input type="number" class="pr-advance" value="${advance}"></td>
-                <td class="number"><strong>${remaining.toLocaleString()}</strong></td>
+                <td class="number"><strong>0</strong></td>
                 <td>
                     <button class="btn small primary btn-pr-save">Lưu</button>
                     <button class="btn small btn-pr-slip">Phiếu lương</button>
                 </td>
             `;
+            updatePayrollRowCalculations(summaryRow);
         }
         updatePayrollGrandTotal();
     } catch (error) {
@@ -758,8 +926,7 @@ function updatePayrollGrandTotal() {
     const summaryRows = $$("#tbl-pr .payroll-summary-row");
 
     summaryRows.forEach(row => {
-        // Cột "Còn lại" là cột thứ 13 (chỉ số 12) sau khi thêm cột "Ghi chú"
-        const remainingCell = row.children[12]; 
+        const remainingCell = row.children[14]; 
         if (remainingCell) {
             // Xóa các ký tự không phải số (như dấu phẩy) để chuyển đổi
             const remainingValue = parseFloat(remainingCell.textContent.replace(/,/g, '')) || 0;
@@ -903,7 +1070,7 @@ function handlePayrollActions() {
                 while (detailRow && detailRow.classList.contains('payroll-detail-row')) {
                     const entryId = detailRow.dataset.entryId;
                     const newRate = parseFloat(detailRow.querySelector('.pr-rate-detail').value) || 0;
-                    const hoursText = detailRow.children[2].textContent;
+                    const hoursText = detailRow.children[4].textContent;
                     const hours = parseFloat(hoursText) || 0;
                     
                     const newGross = newRate * hours;
@@ -942,7 +1109,7 @@ function handlePayrollActions() {
                 
                 alert(`Đã cập nhật thành công.`);
                 
-                row.children[4].innerHTML = `<strong>${currentTotalGross.toLocaleString()}</strong>`;
+                row.children[6].innerHTML = `<strong>${currentTotalGross.toLocaleString()}</strong>`;
                 const net = currentTotalGross + bonus - bhxh - pitax - deductions;
                 const remaining = net - advance;
 
@@ -1115,6 +1282,48 @@ async function generateAndPrintPayslip(employeeId, month) {
     const payrollEntries = appData.entryMonthly.filter(e => e.employeeId === employeeId && e.month === month);
 
     const payslipHtml = createPayslipHtml(employee, payrollEntries, payroll, month);
+
+
+        // =============================================================================
+    // THÊM BỘ LẮNG NGHE SỰ KIỆN MỚI CHO VIỆC TỰ ĐỘNG TÍNH TOÁN
+    // =============================================================================
+    const prTbody = $("#tbl-pr tbody");
+    if (prTbody) {
+        prTbody.addEventListener('input', (e) => {
+            const target = e.target;
+            // Kiểm tra nếu ô input thay đổi có ảnh hưởng đến tính toán lương
+            if (target.classList.contains('pr-rate-detail') ||
+                target.classList.contains('pr-bonus') ||
+                target.classList.contains('pr-bhxh') ||
+                target.classList.contains('pr-deductions') ||
+                target.classList.contains('pr-pitax') || // Thêm thuế để tính lại Net
+                target.classList.contains('pr-advance')) {
+                
+                let summaryRow;
+                const parentRow = target.closest('tr');
+
+                if (parentRow.classList.contains('payroll-summary-row')) {
+                    summaryRow = parentRow;
+                } else if (parentRow.classList.contains('payroll-detail-row')) {
+                    // Nếu thay đổi rate ở dòng chi tiết, tìm dòng tổng kết tương ứng
+                    let nextRow = parentRow.nextElementSibling;
+                    while(nextRow && !nextRow.classList.contains('payroll-summary-row')) {
+                        nextRow = nextRow.nextElementSibling;
+                    }
+                    summaryRow = nextRow;
+                }
+
+                if (summaryRow) {
+                    // Gọi hàm tính toán lại cho dòng tổng kết đó
+                    // Chỉ gợi ý thuế mới khi người dùng không tự tay sửa ô thuế
+                    const shouldSuggestPIT = !target.classList.contains('pr-pitax');
+                    updatePayrollRowCalculations(summaryRow, shouldSuggestPIT);
+                }
+            }
+        });
+    }
+
+
 
     const modal = $("#payslip-modal");
     const modalBody = $("#payslip-modal-body");
