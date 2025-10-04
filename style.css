@@ -623,3 +623,10 @@ input:focus {
 .payroll-total-card p {
     color: var(--danger-color);
 }
+
+.chart-scroll-container {
+    position: relative;
+    width: 100%;
+    overflow-x: auto; /* Đây là dòng quan trọng nhất, tạo thanh cuộn ngang */
+    padding-bottom: 10px; /* Thêm chút không gian cho thanh cuộn */
+}

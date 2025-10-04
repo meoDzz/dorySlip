@@ -75,7 +75,7 @@ let appData = {
   payrolls: []
 };
 window.currentUser = null;
-
+window.myPayrollChart = null;
 
 /** ============= FIRESTORE DATA HANDLING ============= **/
 async function loadInitialData() {
@@ -93,6 +93,7 @@ async function loadInitialData() {
     
     console.log("Data loaded!", appData);
     refreshStats();
+    renderMonthlyChart(); // Hàm vẽ biểu đồ
   } catch (error)
   {
     console.error("Error loading initial data: ", error);
@@ -140,7 +141,7 @@ function createEntryRowHtml(data = {}) {
         
         <td><input type="number" class="en-hoursPerSession" step="0.25" placeholder="Giờ/buổi" value="${finalData.hoursPerSession || 1.5}"></td>
         
-        <td><input type="number" class="en-totalHours" step="0.25" placeholder="Giờ" value="${totalHours.toFixed(2)}" readonly></td>
+        <td><input type="number" class="en-totalHours" step="0.25" placeholder="Giờ" value="${totalHours}" readonly></td>
         
         <td><button class="btn danger small btn-en-deleterow">Xóa</button></td>
     `;
@@ -459,7 +460,7 @@ if (entryTbody) {
             const sessions = parseFloat(row.querySelector('.en-totalSessions').value) || 0;
             const hoursPerSession = parseFloat(row.querySelector('.en-hoursPerSession').value) || 0;
             const totalHours = sessions * hoursPerSession;
-            row.querySelector('.en-totalHours').value = totalHours.toFixed(2); // toFixed(2) để làm tròn đến 2 chữ số thập phân
+            row.querySelector('.en-totalHours').value = totalHours; // toFixed(2) để làm tròn đến 2 chữ số thập phân
         }
     });
 }
@@ -1527,6 +1528,261 @@ function createPayslipHtmlForEmail(employee, payrollEntries, payroll, month) {
 
 
 
+// function renderMonthlyChart() {
+//     // 1. Chuẩn bị dữ liệu
+//     const monthlyData = {};
 
+//     // Tính tổng Gross từ entryMonthly
+//     appData.entryMonthly.forEach(entry => {
+//         const month = entry.month;
+//         if (!monthlyData[month]) {
+//             monthlyData[month] = { gross: 0, bonus: 0, deductions: 0, remaining: 0 };
+//         }
+//         const rate = entry.rate || 0;
+//         const hours = entry.totalHours || 0;
+//         monthlyData[month].gross += rate * hours;
+//     });
 
+//     // Tính tổng các khoản khác từ payrolls
+//     appData.payrolls.forEach(payroll => {
+//         const month = payroll.month;
+//         if (!monthlyData[month]) {
+//             // Trường hợp có payroll nhưng không có entry (hiếm gặp)
+//             monthlyData[month] = { gross: 0, bonus: 0, deductions: 0, remaining: 0 };
+//         }
+//         const bonus = payroll.bonus || 0;
+//         const bhxh = payroll.bhxh || 0;
+//         const pitax = payroll.pitax || 0;
+//         const otherDeductions = payroll.deductions || 0;
+//         const advance = payroll.advance || 0;
 
+//         monthlyData[month].bonus += bonus;
+//         monthlyData[month].deductions += bhxh + pitax + otherDeductions;
+        
+//         // Tính tiền còn lại dựa trên gross đã có
+//         // Lưu ý: Phép tính này chỉ chính xác nếu gross đã được tính đầy đủ từ entry
+//         const net = (monthlyData[month].gross || 0) + bonus - (bhxh + pitax + otherDeductions);
+//         monthlyData[month].remaining += net - advance;
+//     });
+
+//     // 2. Sắp xếp tháng và tạo labels, datasets
+//     const sortedMonths = Object.keys(monthlyData).sort();
+    
+//     const labels = sortedMonths;
+//     const grossData = sortedMonths.map(month => monthlyData[month].gross);
+//     const bonusData = sortedMonths.map(month => monthlyData[month].bonus);
+//     const deductionsData = sortedMonths.map(month => monthlyData[month].deductions);
+//     const remainingData = sortedMonths.map(month => monthlyData[month].remaining);
+
+//     // 3. Vẽ biểu đồ
+//     const ctx = document.getElementById('monthly-payroll-chart');
+//     if (!ctx) return;
+
+//     // Nếu biểu đồ đã tồn tại, hủy nó đi trước khi vẽ lại
+//     if (window.myPayrollChart) {
+//         window.myPayrollChart.destroy();
+//     }
+
+//     window.myPayrollChart = new Chart(ctx, {
+//         type: 'bar', // Loại biểu đồ cột
+//         data: {
+//             labels: labels,
+//             datasets: [
+//                 {
+//                     label: 'Tổng Gross',
+//                     data: grossData,
+//                     backgroundColor: 'rgba(74, 144, 226, 0.7)', // Màu xanh
+//                     borderColor: 'rgba(74, 144, 226, 1)',
+//                     borderWidth: 1
+//                 },
+//                 {
+//                     label: 'Thực trả (Còn lại)',
+//                     data: remainingData,
+//                     backgroundColor: 'rgba(208, 2, 27, 0.7)', // Màu đỏ
+//                     borderColor: 'rgba(208, 2, 27, 1)',
+//                     borderWidth: 1
+//                 },
+//                  {
+//                     label: 'Tổng khấu trừ',
+//                     data: deductionsData,
+//                     backgroundColor: 'rgba(245, 166, 35, 0.7)', // Màu cam
+//                     borderColor: 'rgba(245, 166, 35, 1)',
+//                     borderWidth: 1
+//                 }
+//             ]
+//         },
+//         options: {
+//             responsive: true,
+//             plugins: {
+//                 title: {
+//                     display: true,
+//                     text: 'Thống kê chi phí lương hàng tháng'
+//                 },
+//                 tooltip: {
+//                     callbacks: {
+//                         label: function(context) {
+//                             let label = context.dataset.label || '';
+//                             if (label) {
+//                                 label += ': ';
+//                             }
+//                             if (context.parsed.y !== null) {
+//                                 label += new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(context.parsed.y);
+//                             }
+//                             return label;
+//                         }
+//                     }
+//                 }
+//             },
+//             scales: {
+//                 y: {
+//                     beginAtZero: true,
+//                     ticks: {
+//                         callback: function(value, index, ticks) {
+//                             return new Intl.NumberFormat('vi-VN').format(value);
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     });
+// }
+
+// THAY THẾ TOÀN BỘ HÀM CŨ BẰNG PHIÊN BẢN MỚI NÀY
+
+function renderMonthlyChart() {
+    // 1. Chuẩn bị dữ liệu
+    const monthlyData = {};
+
+    // Gom tất cả các tháng có dữ liệu từ cả hai nguồn
+    const allMonths = new Set([
+        ...appData.entryMonthly.map(e => e.month),
+        ...appData.payrolls.map(p => p.month)
+    ]);
+    
+    // Khởi tạo đối tượng rỗng cho mỗi tháng
+    allMonths.forEach(month => {
+        monthlyData[month] = { gross: 0, bonus: 0, deductions: 0, advance: 0 };
+    });
+
+    // Bước 1: Tính tổng Gross từ entryMonthly cho mỗi tháng
+    appData.entryMonthly.forEach(entry => {
+        const month = entry.month;
+        if (monthlyData[month]) {
+            const rate = entry.rate || 0;
+            const hours = entry.totalHours || 0;
+            monthlyData[month].gross += rate * hours;
+        }
+    });
+
+    // Bước 2: Tính tổng các khoản khác từ payrolls cho mỗi tháng
+    appData.payrolls.forEach(payroll => {
+        const month = payroll.month;
+        if (monthlyData[month]) {
+            monthlyData[month].bonus += payroll.bonus || 0;
+            monthlyData[month].deductions += (payroll.bhxh || 0) + (payroll.pitax || 0) + (payroll.deductions || 0);
+            monthlyData[month].advance += payroll.advance || 0;
+        }
+    });
+
+    // 2. Sắp xếp tháng và tạo labels, datasets
+    const sortedMonths = Object.keys(monthlyData).sort();
+    
+    const labels = sortedMonths;
+    const grossData = [];
+    const deductionsData = [];
+    const remainingData = [];
+
+    // Bước 3: Tính toán số tiền "Còn lại" cuối cùng cho mỗi tháng và đẩy vào mảng dữ liệu
+    sortedMonths.forEach(month => {
+        const data = monthlyData[month];
+        const net = data.gross + data.bonus - data.deductions;
+        const remaining = net - data.advance;
+        console.log(`Month: ${month}, Gross: ${data.gross}, Bonus: ${data.bonus}, Deductions: ${data.deductions}, Advance: ${data.advance}, Remaining: ${remaining}`);
+        grossData.push(data.gross);
+        deductionsData.push(data.deductions);
+        remainingData.push(remaining);
+    });
+
+    // 3. Vẽ biểu đồ
+    const ctx = document.getElementById('monthly-payroll-chart');
+    if (!ctx) return;
+    
+    const chartContainer = ctx.parentElement; 
+    const MAX_MONTHS_VISIBLE = 12;
+    const WIDTH_PER_MONTH_PX = 80;
+
+    if (labels.length > MAX_MONTHS_VISIBLE) {
+        const newWidth = labels.length * WIDTH_PER_MONTH_PX;
+        chartContainer.style.minWidth = `${newWidth}px`;
+    } else {
+        chartContainer.style.minWidth = `100%`;
+    }
+
+    if (window.myPayrollChart) {
+        window.myPayrollChart.destroy();
+    }
+
+    window.myPayrollChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Tổng Gross',
+                    data: grossData,
+                    backgroundColor: 'rgba(74, 144, 226, 0.7)',
+                    borderColor: 'rgba(74, 144, 226, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Thực trả (Còn lại)',
+                    data: remainingData,
+                    backgroundColor: 'rgba(208, 2, 27, 0.7)',
+                    borderColor: 'rgba(208, 2, 27, 1)',
+                    borderWidth: 1
+                },
+                 {
+                    label: 'Tổng khấu trừ',
+                    data: deductionsData,
+                    backgroundColor: 'rgba(245, 166, 35, 0.7)',
+                    borderColor: 'rgba(245, 166, 35, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false, // **QUAN TRỌNG:** Cho phép biểu đồ thay đổi tỉ lệ
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Thống kê chi phí lương hàng tháng'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value, index, ticks) {
+                            return new Intl.NumberFormat('vi-VN').format(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
