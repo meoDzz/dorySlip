@@ -649,6 +649,9 @@ async function loadEntriesForMonth(month) {
 // =============================================================================
 // HÀM TÍNH TOÁN VÀ GỢI Ý THUẾ TNCN MỚI
 // =============================================================================
+// =============================================================================
+// HÀM TÍNH TOÁN VÀ GỢI Ý THUẾ TNCN MỚI
+// =============================================================================
 function updatePayrollRowCalculations(summaryRow, shouldSuggestPIT = true) {
     if (!summaryRow || !summaryRow.classList.contains('payroll-summary-row')) return;
 
@@ -673,13 +676,13 @@ function updatePayrollRowCalculations(summaryRow, shouldSuggestPIT = true) {
     const deductions = parseFloat(summaryRow.querySelector(".pr-deductions").value) || 0;
     const pitInput = summaryRow.querySelector(".pr-pitax");
 
-    // 3. Tự động tính và điền thuế TNCN nếu cần
-    if (shouldSuggestPIT) {
-        const baseIncome = totalGross + bonus - bhxh - deductions;
-        // Công thức tính thuế 10% trên lương thực nhận: (Thu nhập chịu thuế) / 11
-        const suggestedPIT = (baseIncome > 0) ? Math.round(baseIncome / 11) : 0;
-        pitInput.value = suggestedPIT;
-    }
+    // 3. Tự động tính và điền thuế TNCN (ĐÃ TẮT THEO YÊU CẦU)
+    // if (shouldSuggestPIT) {
+    //     const baseIncome = totalGross + bonus - bhxh - deductions;
+    //     // Công thức tính thuế 10% trên lương thực nhận: (Thu nhập chịu thuế) / 11
+    //     const suggestedPIT = (baseIncome > 0) ? Math.round(baseIncome / 11) : 0;
+    //     pitInput.value = suggestedPIT;
+    // }
 
     // 4. Tính toán Net và Còn lại dựa trên giá trị cuối cùng (có thể do người dùng tự sửa)
     const pitax = parseFloat(pitInput.value) || 0;
