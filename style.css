@@ -630,3 +630,34 @@ input:focus {
     overflow-x: auto; /* Đây là dòng quan trọng nhất, tạo thanh cuộn ngang */
     padding-bottom: 10px; /* Thêm chút không gian cho thanh cuộn */
 }
+
+
+
+/* Dán vào cuối file style.css */
+
+input[type="text"],
+input[type="password"],
+input[type="month"],
+input[type="number"],
+select { /* <-- Thêm 'select' vào đây */
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    font-size: 14px;
+    font-family: var(--font-family);
+    background-color: var(--card-background); /* Thêm màu nền cho nhất quán */
+    color: var(--text-color); /* Thêm màu chữ cho nhất quán */
+}
+
+select:focus, /* <-- Thêm 'select:focus' vào đây */
+input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+/* Căn chỉnh label và select trong toolbar */
+#view-payroll .toolbar label {
+    display: flex;
+    align-items: center;
+}

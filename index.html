@@ -134,6 +134,10 @@
                 <div class="toolbar">
                     <label for="pr-month">Chọn tháng:</label>
                     <input type="month" id="pr-month">
+                    
+                    <label for="email-sender-select" style="margin-left: 20px;">Gửi từ Email:</label>
+                    <select id="email-sender-select"></select>
+                    
                     <div class="actions">
                         <button id="btn-pr-build" class="btn primary">Tổng hợp tháng</button>
                     </div>
@@ -190,12 +194,12 @@
 
 
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <script type="text/javascript">
+    <!-- <script type="text/javascript">
         (function() {
             // Khởi tạo EmailJS với public key của bạn
             emailjs.init("V8_GRui5iRp1N95Sx"); // THAY THẾ BẰNG PUBLIC KEY CỦA BẠN
         })();
-    </script>
+    </script> -->
 </body>
 </html>
 

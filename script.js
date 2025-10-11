@@ -1,7 +1,40 @@
 //ver 2 bonus email
-const EMAILJS_SERVICE_ID = 'service_9h1ejxa';
-const EMAILJS_TEMPLATE_ID = 'template_rrfzyjl';
-const EMAILJS_PUBLIC_KEY = 'V8_GRui5iRp1N95Sx';
+const emailConfigs = [
+    {
+        name: "Email Kế Toán (Mặc định)", // Tên hiển thị trong dropdown
+        serviceId: 'service_9h1ejxa',
+        templateId: 'template_rrfzyjl',
+        publicKey: 'V8_GRui5iRp1N95Sx'
+    },
+    {
+        name: "Email Kế Toán (Backup)",
+        serviceId: 'service_oxtrb7p', // THAY BẰNG SERVICE ID CỦA TÀI KHOẢN NHÂN SỰ
+        templateId: 'template_rrfzyjl', // THAY BẰNG TEMPLATE ID CỦA TÀI KHOẢN NHÂN SỰ
+        publicKey: 'V8_GRui5iRp1N95Sx' // THAY BẰNG PUBLIC KEY CỦA TÀI KHOẢN NHÂN SỰ
+    }
+    // Thêm các tài khoản khác ở đây...
+];
+
+function refreshStats() {
+  $("#stat-emps").textContent = appData.employees.length;
+  // Sửa lại cách đếm, vì entryMonthly giờ là chi tiết từng lớp
+  const uniqueEntries = new Set(appData.entryMonthly.map(e => `${e.month}_${e.employeeId}`)).size;
+  $("#stat-rows").textContent = uniqueEntries;
+}
+
+// *** DÁN HÀM MỚI VÀO ĐÂY ***
+// *** HÀM MỚI: TẠO DROPDOWN CHỌN EMAIL ***
+function populateEmailSenderDropdown() {
+    const selectEl = $("#email-sender-select");
+    if (!selectEl) return;
+    selectEl.innerHTML = ""; // Xóa các option cũ
+    emailConfigs.forEach((config, index) => {
+        const option = document.createElement('option');
+        option.value = index; // Lưu chỉ số của config
+        option.textContent = config.name; // Hiển thị tên cho người dùng
+        selectEl.appendChild(option);
+    });
+}
 // ... các code khác của script.js ...
 
 /** ================== CONFIGURATION ================== **/
@@ -178,7 +211,13 @@ async function main() {
     show("#view-dashboard");
     activateTabs(".topbar");
     activateTabs("#view-dashboard");
-    
+    // *** THÊM KHỐI MÃ MỚI VÀO ĐÂY ***
+    if (emailConfigs.length > 0) {
+        emailjs.init(emailConfigs[0].publicKey); // Khởi tạo với public key của tài khoản đầu tiên
+        populateEmailSenderDropdown(); // Gọi hàm để tạo dropdown
+    } else {
+        console.warn("Chưa có cấu hình EmailJS nào được thiết lập trong biến emailConfigs.");
+    }
     await loadInitialData();
     initDefaults(); // Chuyển xuống sau khi load data để có thể auto-fill
 
@@ -645,13 +684,6 @@ async function loadEntriesForMonth(month) {
   }
 }
 
-
-// =============================================================================
-// HÀM TÍNH TOÁN VÀ GỢI Ý THUẾ TNCN MỚI
-// =============================================================================
-// =============================================================================
-// HÀM TÍNH TOÁN VÀ GỢI Ý THUẾ TNCN MỚI
-// =============================================================================
 function updatePayrollRowCalculations(summaryRow, shouldSuggestPIT = true) {
     if (!summaryRow || !summaryRow.classList.contains('payroll-summary-row')) return;
 
@@ -1339,7 +1371,56 @@ async function generateAndPrintPayslip(employeeId, month) {
     }
 }
 
+// async function sendPayslipEmail(employeeId, month) {
+//     const employee = appData.employees.find(emp => emp.id === employeeId);
+//     if (!employee || !employee.email) {
+//         alert("Không tìm thấy email của nhân viên.");
+//         return;
+//     }
+//     const payroll = appData.payrolls.find(p => p.id === `${month}_${employeeId}`);
+//     if (!payroll) {
+//         alert("Không tìm thấy dữ liệu lương của nhân viên.");
+//         return;
+//     }
+//     const payrollEntries = appData.entryMonthly.filter(e => e.employeeId === employeeId && e.month === month);
+
+//     // Tìm nút gửi email để cập nhật trạng thái
+//     const btnSendEmail = document.querySelector("#pr-actions-container button:last-child");
+//     if (btnSendEmail) {
+//         btnSendEmail.textContent = "Đang gửi...";
+//         btnSendEmail.disabled = true;
+//     }
+
+//     try {
+//         // Tạo nội dung HTML cho email
+//         const emailHtmlContent = createPayslipHtmlForEmail(employee, payrollEntries, payroll, month);
+
+//         const templateParams = {
+//             to_name: employee.nameVi,
+//             to_email: employee.email,
+//             from_name: 'Phòng Kế Toán Dory', // Thay bằng tên công ty của bạn
+//             subject: `[Dory Data] Bảng Lương Chi Tiết Tháng ${month}`,
+//             // Đây là tham số chứa toàn bộ HTML của phiếu lương
+//             message_html: emailHtmlContent
+//         };
+
+//         await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+//         alert(`Phiếu lương đã được gửi thành công đến ${employee.email}`);
+
+//     } catch (error) {
+//         console.error('Lỗi khi gửi email:', error);
+//         alert(`Đã xảy ra lỗi: ${error.text || error.message || error}`);
+//     } finally {
+//         if (btnSendEmail) {
+//             btnSendEmail.textContent = "Gửi Email Phiếu Lương";
+//             btnSendEmail.disabled = false;
+//         }
+//     }
+// }
+
+// *** THAY THẾ TOÀN BỘ HÀM CŨ BẰNG HÀM MỚI NÀY ***
 async function sendPayslipEmail(employeeId, month) {
+    // 1. Lấy thông tin nhân viên và lương
     const employee = appData.employees.find(emp => emp.id === employeeId);
     if (!employee || !employee.email) {
         alert("Không tìm thấy email của nhân viên.");
@@ -1352,7 +1433,15 @@ async function sendPayslipEmail(employeeId, month) {
     }
     const payrollEntries = appData.entryMonthly.filter(e => e.employeeId === employeeId && e.month === month);
 
-    // Tìm nút gửi email để cập nhật trạng thái
+    // 2. Lấy cấu hình email đã chọn từ dropdown
+    const selectedIndex = $("#email-sender-select").value;
+    const selectedConfig = emailConfigs[selectedIndex];
+    if (!selectedConfig) {
+        alert("Lỗi: Không tìm thấy cấu hình email. Vui lòng kiểm tra lại.");
+        return;
+    }
+
+    // 3. Cập nhật trạng thái nút Gửi
     const btnSendEmail = document.querySelector("#pr-actions-container button:last-child");
     if (btnSendEmail) {
         btnSendEmail.textContent = "Đang gửi...";
@@ -1360,31 +1449,34 @@ async function sendPayslipEmail(employeeId, month) {
     }
 
     try {
-        // Tạo nội dung HTML cho email
+        // 4. Tạo nội dung email và các tham số
         const emailHtmlContent = createPayslipHtmlForEmail(employee, payrollEntries, payroll, month);
 
         const templateParams = {
             to_name: employee.nameVi,
             to_email: employee.email,
-            from_name: 'Phòng Kế Toán Dory', // Thay bằng tên công ty của bạn
+            from_name: 'Phòng Kế Toán Dory', // Bạn có thể tùy chỉnh tên người gửi
             subject: `[Dory Data] Bảng Lương Chi Tiết Tháng ${month}`,
-            // Đây là tham số chứa toàn bộ HTML của phiếu lương
             message_html: emailHtmlContent
         };
 
-        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
-        alert(`Phiếu lương đã được gửi thành công đến ${employee.email}`);
+        // 5. Gửi email với Service ID và Template ID đã chọn
+        await emailjs.send(selectedConfig.serviceId, selectedConfig.templateId, templateParams);
+        alert(`Phiếu lương đã được gửi thành công đến ${employee.email} từ ${selectedConfig.name}.`);
 
     } catch (error) {
         console.error('Lỗi khi gửi email:', error);
         alert(`Đã xảy ra lỗi: ${error.text || error.message || error}`);
     } finally {
+        // 6. Khôi phục lại trạng thái nút Gửi
         if (btnSendEmail) {
             btnSendEmail.textContent = "Gửi Email Phiếu Lương";
             btnSendEmail.disabled = false;
         }
     }
 }
+
+
 
 function numberToVietnameseWords(n) {
     if (n === 0) return "Không đồng";
