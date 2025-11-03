@@ -155,7 +155,7 @@ function createEntryRowHtml(data = {}) {
         
         <td><input type="number" class="en-hoursPerSession" step="0.25" placeholder="Giờ/buổi" value="${finalData.hoursPerSession || 1.5}"></td>
         
-        <td><input type="number" class="en-totalHours" step="0.25" placeholder="Giờ" value="${totalHours}" readonly></td>
+        <td><input type="number" class="en-totalHours" step="0.25" placeholder="Giờ" value="${totalHours.toFixed(3)}" readonly></td>
         
         <td><button class="btn danger small btn-en-deleterow">Xóa</button></td>
     `;
@@ -427,7 +427,7 @@ if (entryTbody) {
             const sessions = parseFloat(row.querySelector('.en-totalSessions').value) || 0;
             const hoursPerSession = parseFloat(row.querySelector('.en-hoursPerSession').value) || 0;
             const totalHours = sessions * hoursPerSession;
-            row.querySelector('.en-totalHours').value = totalHours; // toFixed(2) để làm tròn đến 2 chữ số thập phân
+            row.querySelector('.en-totalHours').value = totalHours.toFixed(3); // toFixed(2) để làm tròn đến 2 chữ số thập phân
         }
     });
 }
