@@ -635,7 +635,7 @@ async function buildPayrollForMonth() {
                 <td><strong>Tổng cộng</strong></td>
                 <td><strong>${totalSessionsForEmployee}</strong></td>
                 <td></td>
-                <td><strong>${totalHoursForEmployee}</strong></td>
+                <td><strong>${totalHoursForEmployee.toFixed(3)}</strong></td>
                 <td></td>
                 <td class="number"><strong>${totalGrossForEmployee.toLocaleString()}</strong></td>
                 <td><input type="number" class="pr-bonus" value="${bonus}"></td>
