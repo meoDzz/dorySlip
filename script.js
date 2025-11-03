@@ -802,7 +802,7 @@ function createPayslipHtml(employee, payrollEntries, payroll, month) {
                 <td>${index + 1}</td>
                 <td>${entry.className}</td>
                 <td class="number">${entry.totalSessions || 0}</td>
-                <td class="number">${entry.totalHours || 0}</td>
+                <td class="number">${(entry.totalHours || 0).toFixed(3)}</td>
                 <td class="number">${entryRate.toLocaleString()}</td>
                 <td class="number">${subtotal.toLocaleString()}</td>
             </tr>
@@ -1124,7 +1124,7 @@ function createPayslipHtmlForEmail(employee, payrollEntries, payroll, month) {
 
     const detailRowsHtml = payrollEntries.map((entry, index) => {
         const entryRate = entry.rate || payroll.rate || employee.rate || 0;
-        const subtotal = (entry.totalHours || 0) * entryRate;
+        const subtotal = (entry.totalHours || 0).toFixed(3) * entryRate;
         totalGross += subtotal;
         return `
             <tr>
@@ -1132,7 +1132,7 @@ function createPayslipHtmlForEmail(employee, payrollEntries, payroll, month) {
                 <td style="border: 1px solid #e0e0e0; padding: 12px 15px;">${entry.className}</td>
                 <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;">${entry.totalSessions || 0}</td>
                 <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;">${entry.hoursPerSession || 0}</td>
-                <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;">${entry.totalHours || 0}</td>
+                <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;">${(entry.totalHours || 0).toFixed(3)}</td>
                 <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;">${entryRate.toLocaleString()}</td>
                 <td style="border: 1px solid #e0e0e0; padding: 12px 15px; text-align: right;">${subtotal.toLocaleString()}</td>
             </tr>
